@@ -24,7 +24,7 @@ GtkWidget *tone_phase_entry;
 GtkWidget *tone_sr_entry;
 GtkWidget *tone_secs_entry;
 
-char *tone_type_str[]={"", "Sine", "Square", "Sawtooth"};
+char *tone_type_str[]={"", "Sine", "Square", "Saw Tooth"};
 int tone_type;
 double tone_amp;
 double tone_freq;
@@ -41,9 +41,10 @@ GtkWidget *get_widget(char *name){
 }
 
 int set_entry_text(GtkWidget *w, char *fmt, ...){
-    GtkEntry *e = GTK_ENTRY(w);
+    GtkEntry *e;
     va_list ap;
 
+    e = GTK_ENTRY(w);
     va_start(ap, fmt);
     if(strcmp(fmt, "%f")==0){
         snprintf(tstr,STRSIZE,"%f", va_arg(ap, double));
@@ -145,6 +146,23 @@ void on_tone_secs_entry_changed(GtkEntry *e){
     update_tone_entrys();   
 }
 
+void on_tone_combo_changed(GtkComboBoxText *c){
+    char *box_text;
+    int i;
+
+    box_text = gtk_combo_box_text_get_active_text(c);
+    tone_type = 0;
+    printf("tone_type box is %s\n", (char *)box_text);
+    if(box_text != NULL){
+        for(i=0;i<=3;i++){
+            if(strcmp(tone_type_str[i], box_text)==0){
+                tone_type = i;
+            }
+        }
+        g_free(box_text);
+    }
+}
+
 char *get_entry_text(char *buff, GtkWidget *entry){
     strncpy(buff, (char *)gtk_entry_get_text(GTK_ENTRY(entry)),
         STRSIZE);
@@ -162,6 +180,7 @@ void on_generate_tone_button_clicked(GtkButton *b){
     printf("\n");
     printf("Tone values\n");
     printf("--------------------------------------------\n");
+    printf("tone type:   %s\n", tone_type_str[tone_type]);
     printf("amplitude:   %f\n", tone_amp);
     printf("frequency:   %f\n", tone_freq);
     printf("phase:       %f\n", tone_phase);
@@ -193,7 +212,9 @@ int init_globals(int argc, char **argv){
     tone_phase_entry = get_widget("tone_phase_entry");
     tone_sr_entry = get_widget("tone_sr_entry");
     tone_secs_entry = get_widget("tone_secs_entry");
-
+    gtk_combo_box_set_active(GTK_COMBO_BOX(tone_combo),0);
+    
+    tone_type = 1;
     tone_amp = 1.0;
     tone_freq = 440.0;
     tone_phase = 0;

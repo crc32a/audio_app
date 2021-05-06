@@ -60,6 +60,7 @@
                       <item translatable="yes">Square</item>
                       <item translatable="yes">Saw Tooth</item>
                     </items>
+                    <signal name="changed" handler="on_tone_combo_changed" swapped="no"/>
                   </object>
                   <packing>
                     <property name="x">29</property>
