@@ -1,0 +1,7 @@
+set xrange [0:44150]
+set yrange [-1:1]
+set samples 44100
+set grid
+
+plot sin(2*pi*2*x)
+
