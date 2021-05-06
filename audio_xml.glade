@@ -2,6 +2,37 @@
 <!-- Generated with glade 3.38.2 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
+  <object class="GtkFileChooserDialog" id="tone_file_save_dialog">
+    <property name="can-focus">False</property>
+    <property name="type-hint">dialog</property>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can-focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can-focus">False</property>
+            <property name="layout-style">end</property>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+      </object>
+    </child>
+  </object>
   <object class="GtkWindow" id="window">
     <property name="can-focus">False</property>
     <child>
@@ -21,7 +52,7 @@
                 <child>
                   <object class="GtkComboBoxText" id="tone_combo">
                     <property name="width-request">100</property>
-                    <property name="height-request">20</property>
+                    <property name="height-request">30</property>
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <items>
@@ -31,8 +62,168 @@
                     </items>
                   </object>
                   <packing>
-                    <property name="x">3</property>
-                    <property name="y">16</property>
+                    <property name="x">29</property>
+                    <property name="y">213</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="tone_save_button">
+                    <property name="label" translatable="yes">Save File</property>
+                    <property name="width-request">97</property>
+                    <property name="height-request">34</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <signal name="clicked" handler="on_tone_save_button_clicked" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">262</property>
+                    <property name="y">212</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="tone_amp_entry">
+                    <property name="width-request">168</property>
+                    <property name="height-request">26</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <signal name="changed" handler="on_tone_amp_entry_changed" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">120</property>
+                    <property name="y">46</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="tone_freq_entry">
+                    <property name="width-request">168</property>
+                    <property name="height-request">26</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <signal name="changed" handler="on_tone_freq_entry_changed" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">120</property>
+                    <property name="y">78</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="tone_phase_entry">
+                    <property name="width-request">168</property>
+                    <property name="height-request">26</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <signal name="changed" handler="on_tone_phase_entry_changed" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">120</property>
+                    <property name="y">112</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="tone_secs_entry">
+                    <property name="width-request">168</property>
+                    <property name="height-request">26</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <signal name="changed" handler="on_tone_secs_entry_changed" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">121</property>
+                    <property name="y">173</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="width-request">80</property>
+                    <property name="height-request">20</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label" translatable="yes">Amplitude</property>
+                  </object>
+                  <packing>
+                    <property name="x">27</property>
+                    <property name="y">48</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="width-request">100</property>
+                    <property name="height-request">20</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label" translatable="yes">Sample Rate</property>
+                  </object>
+                  <packing>
+                    <property name="x">15</property>
+                    <property name="y">142</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="width-request">100</property>
+                    <property name="height-request">29</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label" translatable="yes">Phase</property>
+                  </object>
+                  <packing>
+                    <property name="x">17</property>
+                    <property name="y">112</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="width-request">100</property>
+                    <property name="height-request">20</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label" translatable="yes">Seconds</property>
+                  </object>
+                  <packing>
+                    <property name="x">16</property>
+                    <property name="y">173</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="width-request">100</property>
+                    <property name="height-request">20</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label" translatable="yes">Frequency</property>
+                  </object>
+                  <packing>
+                    <property name="x">17</property>
+                    <property name="y">78</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="tone_sr_entry">
+                    <property name="width-request">168</property>
+                    <property name="height-request">26</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <signal name="changed" handler="on_tone_sr_entry_changed" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">121</property>
+                    <property name="y">143</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="generate_tone_button">
+                    <property name="label" translatable="yes">Generate Tone</property>
+                    <property name="width-request">67</property>
+                    <property name="height-request">34</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <signal name="clicked" handler="on_generate_tone_button_clicked" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">140</property>
+                    <property name="y">211</property>
                   </packing>
                 </child>
               </object>

@@ -16,7 +16,7 @@ gladexml.o: audio_xml.glade
 	ld -r -b binary -o gladexml.o audio_xml.glade
 
 audio_app: audio_app.o dft.o gladexml.o 
-	cc $(GF) -o $(BIN)/audio_app audio_app.o gladexml.o dft.o $(GL)
+	cc $(GF) -o $(BIN)/audio_app audio_app.o gladexml.o dft.o $(GL) -rdynamic
 
 clean:
 	rm -rf *.o
