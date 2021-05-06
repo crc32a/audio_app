@@ -4,6 +4,7 @@
 #include<string.h>
 #include<gtk/gtk.h>
 #include<gtk/gtkx.h>
+#include<stdarg.h>
 #include<math.h>
 #include<ctype.h>
 #include<dft.h>
@@ -39,19 +40,30 @@ GtkWidget *get_widget(char *name){
     return GTK_WIDGET(gtk_builder_get_object(bld, name));
 }
 
-int set_entry_text(GtkWidget *w, char *fmt, void *text){
+int set_entry_text(GtkWidget *w, char *fmt, ...){
     GtkEntry *e = GTK_ENTRY(w);
-    snprintf(tstr,STRSIZE,fmt,text);
-    gtk_entry_set_text(e,(char *)tstr);
+    va_list ap;
+
+    va_start(ap, fmt);
+    if(strcmp(fmt, "%f")==0){
+        snprintf(tstr,STRSIZE,"%f", va_arg(ap, double));
+    } else if(strcmp(fmt,"%d")==0){
+        snprintf(tstr,STRSIZE,"%d", va_arg(ap, int));
+    } else {
+        strcpy(tstr, "");
+    }
+    va_end(ap);
+    printf("setting text to %s\n", tstr);
+    gtk_entry_set_text(e,(const gchar *)tstr);
     return 0;
 }
 
 int update_tone_entrys(){
-    set_entry_text(tone_amp_entry,"%f", tone_amp_entry);
-    set_entry_text(tone_freq_entry,"%f", tone_freq_entry);
-    set_entry_text(tone_phase_entry,"%f", tone_phase_entry);
-    set_entry_text(tone_sr_entry,"%d", tone_sr_entry);
-    set_entry_text(tone_secs_entry,"%f", tone_secs_entry);
+    set_entry_text(tone_amp_entry,"%f", tone_amp);
+    set_entry_text(tone_freq_entry,"%f", tone_freq);
+    set_entry_text(tone_phase_entry,"%f", tone_phase);
+    set_entry_text(tone_sr_entry,"%d", tone_sr);
+    set_entry_text(tone_secs_entry,"%f", tone_secs);
 }
 
 
