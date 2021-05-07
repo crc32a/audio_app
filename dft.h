@@ -1,6 +1,7 @@
 #include<stdio.h>
-#ifndef __DFT_H
-#define __DFT_H
+#ifndef DFT_H
+#define DFT_H
+
 typedef struct {
     double r;
     double i;

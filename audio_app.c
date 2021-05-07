@@ -4,10 +4,13 @@
 #include<string.h>
 #include<gtk/gtk.h>
 #include<gtk/gtkx.h>
+#include<pthread.h>
 #include<stdarg.h>
-#include<math.h>
 #include<ctype.h>
-#include<dft.h>
+#include<glib.h>
+#include<math.h>
+#include"dft.h"
+#include"audio_app.h"
 
 #define MAXFNSIZE 1023
 #define STRSIZE 255
@@ -16,15 +19,25 @@ char tone_save_file_name[MAXFNSIZE];
 char tstr[STRSIZE];
 GtkWidget *window;
 GtkBuilder *bld;
-GtkWidget *tone_file_save_dialog;
 GtkWidget *tone_combo;
 GtkWidget *tone_amp_entry;
 GtkWidget *tone_freq_entry;
 GtkWidget *tone_phase_entry;
 GtkWidget *tone_sr_entry;
 GtkWidget *tone_secs_entry;
+GdkCursor *busy;
+GdkDisplay *dis;
 
 char *tone_type_str[]={"", "Sine", "Square", "Saw Tooth"};
+
+int (*sigfunc[])(cmp_t *,double,double,double,int,int) =
+        { NULL, sigsine, sigsquare, sigsaw };
+
+pthread_mutex_t tone_generate_lock;
+pthread_mutex_t gsargs_lock;
+pthread_mutex_t busy_lock;
+cmp_t *tone_data;
+gensig_args gsargs;
 int tone_type;
 double tone_amp;
 double tone_freq;
@@ -71,25 +84,28 @@ int update_tone_entrys(){
 void on_tone_save_button_clicked(GtkButton *b){
     gint res;
     char *file_name;
-    GtkDialog *dialog;
+    GtkWidget *dialog;
     GtkFileChooser *chooser;
 
     printf("tone save button clicked\n");
-    dialog = GTK_DIALOG(tone_file_save_dialog);
+    dialog = gtk_file_chooser_dialog_new(
+                 "Save File",
+                 GTK_WINDOW(window),
+                 GTK_FILE_CHOOSER_ACTION_SAVE,
+                 "Cancel",
+                 GTK_RESPONSE_CANCEL,
+                 "Save",
+                 GTK_RESPONSE_ACCEPT,
+                 NULL);
     chooser = GTK_FILE_CHOOSER(dialog);
-    gtk_file_chooser_set_action(chooser,
-        GTK_FILE_CHOOSER_ACTION_SAVE);
-    gtk_file_chooser_set_do_overwrite_confirmation (chooser, TRUE);
     gtk_file_chooser_set_current_name(chooser, tone_save_file_name);
-    gtk_dialog_add_button(dialog, "Save", GTK_RESPONSE_ACCEPT);
-    gtk_dialog_add_button(dialog, "Cancel", GTK_RESPONSE_CANCEL);
-    res = gtk_dialog_run(dialog);
+    gtk_file_chooser_set_filename(chooser, tone_save_file_name);
+    res = gtk_dialog_run(GTK_DIALOG(dialog));
     if(res == GTK_RESPONSE_ACCEPT){
         file_name = gtk_file_chooser_get_filename(chooser);
         strncpy(tone_save_file_name, file_name, MAXFNSIZE);
         g_free(file_name);
-
-    }else{
+        printf("SAVEING %s\n", tone_save_file_name);
     }
     gtk_widget_destroy(GTK_WIDGET(dialog));
 }
@@ -169,7 +185,7 @@ char *get_entry_text(char *buff, GtkWidget *entry){
     return buff;
 }
 
-void on_generate_tone_button_clicked(GtkButton *b){
+int print_tone(){
     printf("Tone Entries\n");
     printf("---------------------------------------------\n");
     printf("amplitutde: %s\n", get_entry_text(tstr,tone_amp_entry));
@@ -186,7 +202,106 @@ void on_generate_tone_button_clicked(GtkButton *b){
     printf("phase:       %f\n", tone_phase);
     printf("sample rate: %d\n", tone_sr);
     printf("seconds:     %f\n", tone_secs);
-    update_tone_entrys();
+    return 0;
+}
+
+void on_generate_tone_button_clicked(GtkButton *b){    
+    pthread_t th;
+    size_t tsize;
+    GdkWindow *win;
+
+    win = gtk_widget_get_window(window);
+    printf("tone button: Busy lock()\n");
+    pthread_mutex_lock(&busy_lock);
+        printf("tone button: starting busy\n");
+        gdk_window_set_cursor(win, busy);
+    pthread_mutex_unlock(&busy_lock);
+    printf("tone_button: sbusy unlock\n");
+    pthread_mutex_lock(&gsargs_lock);
+        gsargs.amp = tone_amp;
+        gsargs.freq = tone_freq;
+        gsargs.phase = tone_phase;
+        gsargs.sr = tone_phase;
+        gsargs.n = (double)tone_sr * tone_secs + 1;
+        printf("tone button: gsargs lock\n");
+        pthread_mutex_lock(&tone_generate_lock);
+            if(tone_data !=NULL){
+                printf("tone button: Freeing tone_data\n");
+                tone_data = NULL;
+                free(tone_data);
+            }
+            tsize = sizeof(cmp_t) * gsargs.n;
+            printf("tone button: malloc tone_data\n");
+            tone_data = (cmp_t*)malloc(tsize);
+            if(tone_data == NULL){
+                printf("Error allocating %d bytes", tsize);
+                printf("for tone signal data storage\n");
+            }
+        printf("tone button: tone unlock\n");
+        pthread_mutex_unlock(&tone_generate_lock);
+        if(tone_data != NULL){
+            printf("tone button: creating thread\n");
+            if(pthread_create(&th, NULL, gensigcaller, NULL) == 0){
+                printf("detaching thread\n");
+                pthread_detach(th);
+            }else{
+                printf("tone button: unlock busy");
+                printf(" pthread failed\n");
+                gdk_window_set_cursor(win, NULL);
+                pthread_mutex_unlock(&busy_lock);
+            }
+        }
+    printf("tone button: gsargs unlock\n");
+    pthread_mutex_unlock(&gsargs_lock);
+}
+
+void *gensigcaller(void *args){
+    GdkWindow *win;
+    char *fmt;
+    double a;
+    double f;
+    double p;
+    int s;
+    int n;
+
+    int (*funcptr)(cmp_t *,double,double,double,int,int);
+    int i;
+
+
+    if(tone_type < 1 || tone_type > 3){
+        printf("Error unknown tone type %d\n", tone_type);
+        return NULL;
+    }
+    funcptr = sigfunc[tone_type];
+    for(i=0;i<=3;i++){
+        printf("%d = %s = %p\n", i, tone_type_str[i], sigfunc[i]);
+    }
+    printf("gensig: gsargs lock\n");
+    pthread_mutex_lock(&gsargs_lock);
+        a = gsargs.amp;
+        f = gsargs.freq;
+        p = gsargs.phase;
+        s = gsargs.sr;
+        n = gsargs.n;
+    printf("gensig: gsargs unlock\n");
+    pthread_mutex_unlock(&gsargs_lock);
+    printf("Current function pointer is set to ");
+    printf("%d = %p\n", tone_type,funcptr);
+    printf("gensig: tone lock\n");
+    pthread_mutex_lock(&tone_generate_lock);
+    sleep(3);
+    printf("gensig: tone unlock\n");
+    pthread_mutex_unlock(&tone_generate_lock);
+    printf("gensig: busy lock\n");
+    pthread_mutex_lock(&busy_lock);
+        printf("gensig: stoppong busy\n");
+        win = gtk_widget_get_window(window);
+        gdk_window_set_cursor(win, NULL);
+    printf("gensig: busy unlock\n");
+    pthread_mutex_unlock(&busy_lock);
+    printf("gensig: thread exit\n");
+    pthread_exit(NULL);
+    printf("gensig: post exit\n");
 }
 
 int init_globals(int argc, char **argv){
@@ -203,7 +318,6 @@ int init_globals(int argc, char **argv){
     bld=gtk_builder_new_from_string(glade_start, glade_size);
     window=get_widget("window");
     tone_combo=get_widget("tone_combo");
-    tone_file_save_dialog = get_widget("tone_file_save_dialog");
     g_signal_connect(window,"destroy",
         G_CALLBACK(gtk_main_quit),NULL);
 
@@ -213,18 +327,32 @@ int init_globals(int argc, char **argv){
     tone_sr_entry = get_widget("tone_sr_entry");
     tone_secs_entry = get_widget("tone_secs_entry");
     gtk_combo_box_set_active(GTK_COMBO_BOX(tone_combo),0);
-    
+    if(pthread_mutex_init(&tone_generate_lock,NULL) != 0){
+        printf("Failed to allocate pthread mutex lock for");
+        printf(" tone generator\n");
+        return -1;
+    }
+    if(pthread_mutex_init(&gsargs_lock,NULL) != 0){
+        printf("Failed to allocate pthread mutex lock for");
+        printf(" tone generator\n");
+        return -1;
+    }
+    if(pthread_mutex_init(&busy_lock, NULL) != 0){
+        printf("Failed to allocate pthread mutex lock for");
+        printf(" busy icon\n");
+    }
     tone_type = 1;
     tone_amp = 1.0;
     tone_freq = 440.0;
     tone_phase = 0;
     tone_sr = 440;
     tone_secs = 10.0;
-
+    tone_data = NULL;
+    dis = gtk_widget_get_display(window);
+    busy = gdk_cursor_new_for_display(dis,GDK_WATCH);
     update_tone_entrys();   
     return 0;
 }
-
 
 int main(int argc, char **argv){
     if(init_globals(argc, argv) < 0){
