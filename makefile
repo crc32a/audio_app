@@ -1,5 +1,5 @@
 BIN=./bin
-CF= -O0 -ggdb -I. -I/opt/local/include -L/opt/local/lib
+CF= -O3 -ggdb -I. -I/opt/local/include -L/opt/local/lib
 GF=$(CF) `pkg-config --cflags gtk+-3.0`
 LIBS= -lm -lsndfile
 GL= `pkg-config --libs gtk+-3.0` -lm -lsndfile -lpthread
