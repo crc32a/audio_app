@@ -17,6 +17,8 @@ typedef struct{
 #endif
 
 GtkWidget *get_widget(char *name);
+int dbgprintfimp(const char *fmt, va_list ap);
+int dbgprintf(const char *fmt, ...);
 int set_entry_text(GtkWidget *w, char *fmt, ...);
 int update_tone_entrys();
 char *get_entry_text(char *buff, GtkWidget *entry);

@@ -28,6 +28,8 @@ GtkWidget *tone_secs_entry;
 GdkCursor *busy;
 GdkDisplay *dis;
 
+#define DEBUG 0
+
 char *tone_type_str[]={"", "Sine", "Square", "Saw Tooth"};
 
 int (*sigfunc[])(cmp_t *,double,double,double,int,int) =
@@ -49,6 +51,21 @@ extern char _binary_audio_xml_glade_end[];
 extern char _binary_audio_xml_glade_size[];
 extern char _binary_audio_xml_glade_start[];
 
+int dbgprintfimp(const char *fmt, va_list ap){
+    if(DEBUG){
+        vfprintf(stderr, fmt, ap);
+    }
+    return 0;
+}
+
+int dbgprintf(const char *fmt, ...){
+    va_list ap;
+    va_start(ap, fmt);
+    dbgprintfimp(fmt, ap);
+    va_end(ap);
+    return 0;
+}
+
 GtkWidget *get_widget(char *name){
     return GTK_WIDGET(gtk_builder_get_object(bld, name));
 }
@@ -67,7 +84,7 @@ int set_entry_text(GtkWidget *w, char *fmt, ...){
         strcpy(tstr, "");
     }
     va_end(ap);
-    printf("setting text to %s\n", tstr);
+    dbgprintf("setting text to %s\n", tstr);
     gtk_entry_set_text(e,(const gchar *)tstr);
     return 0;
 }
@@ -87,7 +104,7 @@ void on_tone_save_button_clicked(GtkButton *b){
     GtkWidget *dialog;
     GtkFileChooser *chooser;
 
-    printf("tone save button clicked\n");
+    dbgprintf("tone save button clicked\n");
     dialog = gtk_file_chooser_dialog_new(
                  "Save File",
                  GTK_WINDOW(window),
@@ -105,7 +122,7 @@ void on_tone_save_button_clicked(GtkButton *b){
         file_name = gtk_file_chooser_get_filename(chooser);
         strncpy(tone_save_file_name, file_name, MAXFNSIZE);
         g_free(file_name);
-        printf("SAVEING %s\n", tone_save_file_name);
+        dbgprintf("SAVEING %s\n", tone_save_file_name);
     }
     gtk_widget_destroy(GTK_WIDGET(dialog));
  }
@@ -168,7 +185,7 @@ void on_tone_combo_changed(GtkComboBoxText *c){
 
     box_text = gtk_combo_box_text_get_active_text(c);
     tone_type = 0;
-    printf("tone_type box is %s\n", (char *)box_text);
+    dbgprintf("tone_type box is %s\n", (char *)box_text);
     if(box_text != NULL){
         for(i=0;i<=3;i++){
             if(strcmp(tone_type_str[i], box_text)==0){
@@ -186,22 +203,22 @@ char *get_entry_text(char *buff, GtkWidget *entry){
 }
 
 int print_tone(){
-    printf("Tone Entries\n");
-    printf("---------------------------------------------\n");
-    printf("amplitutde: %s\n", get_entry_text(tstr,tone_amp_entry));
-    printf("frequency: %s\n", get_entry_text(tstr,tone_freq_entry));
-    printf("phase: %s\n", get_entry_text(tstr,tone_phase_entry));
-    printf("sample rate: %s\n", get_entry_text(tstr,tone_sr_entry));
-    printf("seconds: %s\n", get_entry_text(tstr,tone_secs_entry));
-    printf("\n");
-    printf("Tone values\n");
-    printf("--------------------------------------------\n");
-    printf("tone type:   %s\n", tone_type_str[tone_type]);
-    printf("amplitude:   %f\n", tone_amp);
-    printf("frequency:   %f\n", tone_freq);
-    printf("phase:       %f\n", tone_phase);
-    printf("sample rate: %d\n", tone_sr);
-    printf("seconds:     %f\n", tone_secs);
+    dbgprintf("Tone Entries\n");
+    dbgprintf("---------------------------------------------\n");
+    dbgprintf("amplitutde: %s\n", get_entry_text(tstr,tone_amp_entry));
+    dbgprintf("frequency: %s\n", get_entry_text(tstr,tone_freq_entry));
+    dbgprintf("phase: %s\n", get_entry_text(tstr,tone_phase_entry));
+    dbgprintf("sample rate: %s\n", get_entry_text(tstr,tone_sr_entry));
+    dbgprintf("seconds: %s\n", get_entry_text(tstr,tone_secs_entry));
+    dbgprintf("\n");
+    dbgprintf("Tone values\n");
+    dbgprintf("--------------------------------------------\n");
+    dbgprintf("tone type:   %s\n", tone_type_str[tone_type]);
+    dbgprintf("amplitude:   %f\n", tone_amp);
+    dbgprintf("frequency:   %f\n", tone_freq);
+    dbgprintf("phase:       %f\n", tone_phase);
+    dbgprintf("sample rate: %d\n", tone_sr);
+    dbgprintf("seconds:     %f\n", tone_secs);
     return 0;
 }
 
@@ -212,12 +229,12 @@ void on_generate_tone_button_clicked(GtkButton *b){
 
     print_tone();
     win = gtk_widget_get_window(window);
-    printf("tone button: Busy lock()\n");
+    dbgprintf("tone button: Busy lock()\n");
     pthread_mutex_lock(&busy_lock);
-        printf("tone button: starting busy\n");
+        dbgprintf("tone button: starting busy\n");
         gdk_window_set_cursor(win, busy);
     pthread_mutex_unlock(&busy_lock);
-    printf("tone_button: sbusy unlock\n");
+    dbgprintf("tone_button: sbusy unlock\n");
     pthread_mutex_lock(&gsargs_lock);
         gsargs.amp = tone_amp;
         gsargs.freq = tone_freq;
@@ -225,46 +242,46 @@ void on_generate_tone_button_clicked(GtkButton *b){
         gsargs.sr = tone_sr;
         gsargs.n = (int)(tone_sr * tone_secs + 1);
         tsize = sizeof(cmp_t) * gsargs.n;
-        printf("n = %d tsize = %d\n", gsargs.n, tsize);
-        printf("tone button: tone lock\n");
+        dbgprintf("n = %d tsize = %d\n", gsargs.n, tsize);
+        dbgprintf("tone button: tone lock\n");
         pthread_mutex_lock(&tone_generate_lock);
             if(tone_data !=NULL){
-                printf("tone button: Freeing tone_data\n");
+                dbgprintf("tone button: Freeing tone_data\n");
                 free(tone_data);
                 tone_data = NULL;
             }
-            printf("tone button: malloc %d bytes", tsize);
-            printf(" for tone_data\n");
+            dbgprintf("tone button: malloc %d bytes", tsize);
+            dbgprintf(" for tone_data\n");
             if(tsize > 0){
                 tone_data = (cmp_t *)malloc(tsize);
             }else{
-                printf("tsize %d out of range ", tsize);
-                printf("for tone_data %p\n", tone_data);
+                dbgprintf("tsize %d out of range ", tsize);
+                dbgprintf("for tone_data %p\n", tone_data);
             }
             if(tone_data == NULL){
-                printf("Error allocating %d bytes", tsize);
-                printf("for tone signal data storage\n");
+                dbgprintf("Error allocating %d bytes", tsize);
+                dbgprintf("for tone signal data storage\n");
             }
-        printf("tone button: tone unlock\n");
+        dbgprintf("tone button: tone unlock\n");
         pthread_mutex_unlock(&tone_generate_lock);
         if(tone_data != NULL){
-            printf("tone button: creating thread\n");
+            dbgprintf("tone button: creating thread\n");
             if(pthread_create(&th, NULL, gensigcaller, NULL) == 0){
-                printf("tone button: detaching thread\n");
+                dbgprintf("tone button: detaching thread\n");
                 pthread_detach(th);
             }else{
-                printf("no thread created tone button: unlock busy");
-                printf(" pthread failed\n");
+                dbgprintf("no thread created tone button: unlock busy");
+                dbgprintf(" pthread failed\n");
                 gdk_window_set_cursor(win, NULL);
                 pthread_mutex_unlock(&busy_lock);
             }
         } else {
-                printf("no thread created tone button: unlock busy");
-                printf(" pthread failed\n");
+                dbgprintf("no thread created tone button: ");
+                dbgprintf("unlock busy pthread failed\n");
                 gdk_window_set_cursor(win, NULL);
                 pthread_mutex_unlock(&busy_lock);
         }
-    printf("tone button: gsargs unlock\n");
+    dbgprintf("tone button: gsargs unlock\n");
     pthread_mutex_unlock(&gsargs_lock);
 }
 
@@ -282,40 +299,40 @@ void *gensigcaller(void *args){
 
 
     if(tone_type < 1 || tone_type > 3){
-        printf("Error unknown tone type %d\n", tone_type);
+        dbgprintf("Error unknown tone type %d\n", tone_type);
         return NULL;
     }
     funcptr = sigfunc[tone_type];
     for(i=0;i<=3;i++){
-        printf("%d = %s = %p\n", i, tone_type_str[i], sigfunc[i]);
+        dbgprintf("%d = %s = %p\n", i, tone_type_str[i], sigfunc[i]);
     }
-    printf("gensig: gsargs lock\n");
+    dbgprintf("gensig: gsargs lock\n");
     pthread_mutex_lock(&gsargs_lock);
         a = gsargs.amp;
         f = gsargs.freq;
         p = gsargs.phase;
         s = gsargs.sr;
         n = gsargs.n;
-    printf("gsigargs = %p,%f,%f,%f,%i,%i\n", tone_data,a,f,p,s,n);
-    printf("gensig: gsargs unlock\n");
+    dbgprintf("gsigargs = %p,%f,%f,%f,%i,%i\n", tone_data,a,f,p,s,n);
+    dbgprintf("gensig: gsargs unlock\n");
     pthread_mutex_unlock(&gsargs_lock);
-    printf("Current function pointer is set to ");
-    printf("%d = %p\n", tone_type,funcptr);
-    printf("gensig: tone lock\n");
+    dbgprintf("Current function pointer is set to ");
+    dbgprintf("%d = %p\n", tone_type,funcptr);
+    dbgprintf("gensig: tone lock\n");
     pthread_mutex_lock(&tone_generate_lock);
         (*funcptr)(tone_data,a,f,p,s,n);
-    printf("gensig: tone unlock\n");
+    dbgprintf("gensig: tone unlock\n");
     pthread_mutex_unlock(&tone_generate_lock);
-    printf("gensig: busy lock\n");
+    dbgprintf("gensig: busy lock\n");
     pthread_mutex_lock(&busy_lock);
-        printf("gensig: stoppong busy\n");
+        dbgprintf("gensig: stoppong busy\n");
         win = gtk_widget_get_window(window);
         gdk_window_set_cursor(win, NULL);
-    printf("gensig: busy unlock\n");
+    dbgprintf("gensig: busy unlock\n");
     pthread_mutex_unlock(&busy_lock);
-    printf("gensig: thread exit\n");
+    dbgprintf("gensig: thread exit\n");
     pthread_exit(NULL);
-    printf("gensig: post exit\n");
+    dbgprintf("gensig: post exit\n");
 }
 
 int init_globals(int argc, char **argv){
@@ -342,18 +359,18 @@ int init_globals(int argc, char **argv){
     tone_secs_entry = get_widget("tone_secs_entry");
     gtk_combo_box_set_active(GTK_COMBO_BOX(tone_combo),0);
     if(pthread_mutex_init(&tone_generate_lock,NULL) != 0){
-        printf("Failed to allocate pthread mutex lock for");
-        printf(" tone generator\n");
+        dbgprintf("Failed to allocate pthread mutex lock for");
+        dbgprintf(" tone generator\n");
         return -1;
     }
     if(pthread_mutex_init(&gsargs_lock,NULL) != 0){
-        printf("Failed to allocate pthread mutex lock for");
-        printf(" tone generator\n");
+        dbgprintf("Failed to allocate pthread mutex lock for");
+        dbgprintf(" tone generator\n");
         return -1;
     }
     if(pthread_mutex_init(&busy_lock, NULL) != 0){
-        printf("Failed to allocate pthread mutex lock for");
-        printf(" busy icon\n");
+        dbgprintf("Failed to allocate pthread mutex lock for");
+        dbgprintf(" busy icon\n");
     }
     tone_type = 1;
     tone_amp = 1.0;

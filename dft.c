@@ -277,26 +277,10 @@ int fout_cmp(FILE *fp,cmp_t *p, int n){
     return 0;
 }
 
-int print_sigargs(cmp_t *o,double a,double f,double p,
-int s, int n,char *name){
-    printf("Sigsign report generator \"%s\"\n", name);
-    printf("----------------------------------------------\n");
-    printf("data = %p\n", o);
-    printf("amplitude   = %f\n", a);
-    printf("frequency   = %f\n", f);
-    printf("phase       = %f\n", p);
-    printf("samplerate  = %d\n", s);
-    printf("n           = %d\n", n);
-    printf("\n");
-    return 0;
-}
-
 int sigsine(cmp_t *o, double a, double f,double ph,
 int s, int n){
     double cons;
     int i;
-
-    print_sigargs(o,a,f,ph,s,n,"sine");
 
     cons = 2*M_PI*f / (double)s;
     for(i=0;i<n;i++) {
