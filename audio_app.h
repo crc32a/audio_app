@@ -5,6 +5,8 @@
 #define AUDIO_aPP_H
 
 typedef struct{
+    char *fn1;
+    char *fn2;
     int ret;
     double amp;
     double freq;
@@ -24,6 +26,7 @@ int update_tone_entrys();
 char *get_entry_text(char *buff, GtkWidget *entry);
 int init_globals(int argc, char **argv);
 void *gensigcaller(void *);
+void *savetonecaller(void *);
 int print_tone();
 
 // Signals

@@ -28,7 +28,7 @@ GtkWidget *tone_secs_entry;
 GdkCursor *busy;
 GdkDisplay *dis;
 
-#define DEBUG 0
+#define DEBUG 1
 
 char *tone_type_str[]={"", "Sine", "Square", "Saw Tooth"};
 
@@ -99,11 +99,14 @@ int update_tone_entrys(){
 
 
 void on_tone_save_button_clicked(GtkButton *b){
+    GdkWindow *win;
     gint res;
     char *file_name;
     GtkWidget *dialog;
     GtkFileChooser *chooser;
+    pthread_t th;
 
+    win = gtk_widget_get_window(window);
     dbgprintf("tone save button clicked\n");
     dialog = gtk_file_chooser_dialog_new(
                  "Save File",
@@ -123,9 +126,50 @@ void on_tone_save_button_clicked(GtkButton *b){
         strncpy(tone_save_file_name, file_name, MAXFNSIZE);
         g_free(file_name);
         dbgprintf("SAVEING %s\n", tone_save_file_name);
-    }
+        dbgprintf("save tone file: busy lock()\n");
+        pthread_mutex_lock(&busy_lock);
+            gdk_window_set_cursor(win,busy);
+        pthread_mutex_unlock(&busy_lock);
+        pthread_mutex_lock(&gsargs_lock);
+            gsargs.n = (int)(tone_sr *tone_secs + 1);
+            gsargs.fn1 = tone_save_file_name;
+        pthread_mutex_unlock(&gsargs_lock);
+        if(pthread_create(&th, NULL, savetonecaller, NULL) == 0){
+            dbgprintf("Save tone file threade creqted\n");
+            pthread_detach(th);
+        }
+    }    
     gtk_widget_destroy(GTK_WIDGET(dialog));
  }
+
+void *savetonecaller(void *args){
+    GdkWindow *win;
+    char *file_name;
+    int n;
+
+    win = gtk_widget_get_window(window);
+    dbgprintf("savetonecaller: lock gsargs\n");
+    pthread_mutex_lock(&gsargs_lock);
+        n = gsargs.n;
+        file_name = gsargs.fn1;
+    dbgprintf("savetonecaller: unlock gsargs\n");
+    pthread_mutex_unlock(&gsargs_lock);
+    dbgprintf("savetonecaller: lock tone_generate\n");
+    pthread_mutex_lock(&tone_generate_lock);
+    dbgprintf("savetonecaller: saving file\n");
+        if(tone_data != NULL){
+            dft_fwrite(file_name, tone_data, n);
+        }
+    dbgprintf("savetonecaller: unlock tone_generate\n");
+    pthread_mutex_unlock(&tone_generate_lock);   
+    dbgprintf("savetonecaller: lock spinner\n");
+    pthread_mutex_lock(&busy_lock);
+        gdk_window_set_cursor(win,NULL);
+        dbgprintf("savetonecaller: unlock spinner\n");
+    pthread_mutex_lock(&busy_lock);
+    dbgprintf("Save file thread exit\n");
+    pthread_exit(NULL);
+}
 
 void on_tone_amp_entry_changed(GtkEntry *e){
     char *str;
@@ -270,7 +314,8 @@ void on_generate_tone_button_clicked(GtkButton *b){
                 dbgprintf("tone button: detaching thread\n");
                 pthread_detach(th);
             }else{
-                dbgprintf("no thread created tone button: unlock busy");
+                dbgprintf("no thread created tone button: ");
+                dbgprintf("unlock busy");
                 dbgprintf(" pthread failed\n");
                 gdk_window_set_cursor(win, NULL);
                 pthread_mutex_unlock(&busy_lock);
