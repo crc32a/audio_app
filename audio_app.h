@@ -38,4 +38,11 @@ void on_tone_sr_entry_changed(GtkEntry *e);
 void on_tone_secs_entry_changed(GtkEntry *e);
 void on_tone_combo_changed(GtkComboBoxText *c);
 void on_generate_tone_button_clicked(GtkButton *b);
-
+void on_wav2data_radio_toggled(GtkRadioButton *b);
+void on_data2wave_radio_toggled(GtkRadioButton *b);
+void on_convert_to_file_button_clicked(GtkButton *b);
+void on_convert_from_button_clicked(GtkButton *b);
+void on_convert_sample_rate_entry_changed(GtkEntry *e);
+void on_from_file_entry_changed(GtkEntry *e);
+void on_to_file_entry_changed(GtkEntry *e);
+void on_convert_file_button_clicked(GtkEntry *e);

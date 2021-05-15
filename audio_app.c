@@ -15,8 +15,12 @@
 #define MAXFNSIZE 1023
 #define STRSIZE 255
 
-char tone_save_file_name[MAXFNSIZE];
-char tstr[STRSIZE];
+char tone_save_filename[MAXFNSIZE + 1];
+char convert_from_filename[MAXFNSIZE + 1];
+char convert_to_filename[MAXFNSIZE + 1];
+
+char tstr[STRSIZE + 1];
+
 GtkWidget *window;
 GtkBuilder *bld;
 GtkWidget *tone_combo;
@@ -25,6 +29,16 @@ GtkWidget *tone_freq_entry;
 GtkWidget *tone_phase_entry;
 GtkWidget *tone_sr_entry;
 GtkWidget *tone_secs_entry;
+
+GtkWidget *data2wave_radio;
+GtkWidget *wave2data_radio;
+GtkWidget *convert_to_file_button;
+GtkWidget *convert_from_button;
+GtkWidget *convert_sample_rate_entry;
+GtkWidget *from_file_entry;
+GtkWidget *to_file_entry;
+GtkWidget *convert_file_button;
+
 GdkCursor *busy;
 GdkDisplay *dis;
 
@@ -118,21 +132,21 @@ void on_tone_save_button_clicked(GtkButton *b){
                  GTK_RESPONSE_ACCEPT,
                  NULL);
     chooser = GTK_FILE_CHOOSER(dialog);
-    gtk_file_chooser_set_current_name(chooser, tone_save_file_name);
-    gtk_file_chooser_set_filename(chooser, tone_save_file_name);
+    gtk_file_chooser_set_current_name(chooser, tone_save_filename);
+    gtk_file_chooser_set_filename(chooser, tone_save_filename);
     res = gtk_dialog_run(GTK_DIALOG(dialog));
     if(res == GTK_RESPONSE_ACCEPT){
         file_name = gtk_file_chooser_get_filename(chooser);
-        strncpy(tone_save_file_name, file_name, MAXFNSIZE);
+        strncpy(tone_save_filename, file_name, MAXFNSIZE);
         g_free(file_name);
-        dbgprintf("SAVEING %s\n", tone_save_file_name);
+        dbgprintf("SAVEING %s\n", tone_save_filename);
         dbgprintf("save tone file: busy lock()\n");
         pthread_mutex_lock(&busy_lock);
             gdk_window_set_cursor(win,busy);
         pthread_mutex_unlock(&busy_lock);
         pthread_mutex_lock(&gsargs_lock);
             gsargs.n = (int)(tone_sr *tone_secs + 1);
-            gsargs.fn1 = tone_save_file_name;
+            gsargs.fn1 = tone_save_filename;
         pthread_mutex_unlock(&gsargs_lock);
         if(pthread_create(&th, NULL, savetonecaller, NULL) == 0){
             dbgprintf("Save tone file threade creqted\n");
@@ -380,6 +394,30 @@ void *gensigcaller(void *args){
     dbgprintf("gensig: post exit\n");
 }
 
+void on_wav2data_radio_toggled(GtkRadioButton *b){
+}
+
+void on_data2wave_radio_toggled(GtkRadioButton *b){    
+}
+
+void on_convert_to_file_button_clicked(GtkButton *b){    
+}
+
+void on_convert_from_button_clicked(GtkButton *b){
+}
+
+void on_convert_sample_rate_entry_changed(GtkEntry *e){
+}
+
+void on_from_file_entry_changed(GtkEntry *e){    
+}
+
+void on_to_file_entry_changed(GtkEntry *e){
+}
+
+void on_convert_file_button_clicked(GtkEntry *e){
+}
+
 int init_globals(int argc, char **argv){
     char *glade_start;
     char *glade_end;
@@ -389,7 +427,7 @@ int init_globals(int argc, char **argv){
     glade_start = _binary_audio_xml_glade_start;
     glade_size = glade_end - glade_start;
 
-    strncpy(tone_save_file_name,"untitled.dat", MAXFNSIZE);    
+    strncpy(tone_save_filename,"untitled.dat", MAXFNSIZE);    
     gtk_init(&argc, &argv);
     bld=gtk_builder_new_from_string(glade_start, glade_size);
     window=get_widget("window");
@@ -402,6 +440,17 @@ int init_globals(int argc, char **argv){
     tone_phase_entry = get_widget("tone_phase_entry");
     tone_sr_entry = get_widget("tone_sr_entry");
     tone_secs_entry = get_widget("tone_secs_entry");
+    
+    data2wave_radio = get_widget("data2wave_radio");
+    wave2data_radio = get_widget("wave2data_radio");
+    convert_to_file_button = get_widget("convert_to_file_button");
+    convert_from_button = get_widget("convert_from_file_BUTTON");
+    convert_sample_rate_entry = get_widget("convert_sample_rate_entry");
+    from_file_entry = get_widget("from_file_entry");
+    to_file_entry = get_widget("to_file_entry");
+    convert_file_button = get_widget("convert_file_button");
+
+    
     gtk_combo_box_set_active(GTK_COMBO_BOX(tone_combo),0);
     if(pthread_mutex_init(&tone_generate_lock,NULL) != 0){
         dbgprintf("Failed to allocate pthread mutex lock for");
@@ -417,6 +466,10 @@ int init_globals(int argc, char **argv){
         dbgprintf("Failed to allocate pthread mutex lock for");
         dbgprintf(" busy icon\n");
     }
+    
+    strncpy(tone_save_filename,"", MAXFNSIZE);
+    strncpy(convert_from_filename,"", MAXFNSIZE);
+    strncpy(convert_to_filename,"", MAXFNSIZE);
     tone_type = 1;
     tone_amp = 1.0;
     tone_freq = 440.0;

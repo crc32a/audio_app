@@ -206,6 +206,157 @@
               <object class="GtkFixed">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="width-request">100</property>
+                    <property name="height-request">20</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label" translatable="yes">Sample Rate</property>
+                  </object>
+                  <packing>
+                    <property name="x">2</property>
+                    <property name="y">24</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="convert_sample_rate_entry">
+                    <property name="width-request">168</property>
+                    <property name="height-request">26</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="tooltip-text" translatable="yes">Set the sample rate for the wave file if a data file is the source</property>
+                    <signal name="changed" handler="on_convert_sample_rate_entry_changed" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">96</property>
+                    <property name="y">22</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="convert_from_button">
+                    <property name="label" translatable="yes">From File</property>
+                    <property name="name">convert_rfrom_button</property>
+                    <property name="width-request">102</property>
+                    <property name="height-request">34</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <property name="tooltip-text" translatable="yes">File to load</property>
+                    <signal name="clicked" handler="on_convert_from_button_clicked" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">10</property>
+                    <property name="y">64</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="convert_to_file_button">
+                    <property name="label" translatable="yes">To File</property>
+                    <property name="width-request">100</property>
+                    <property name="height-request">34</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <signal name="clicked" handler="on_convert_to_file_button_clicked" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">9</property>
+                    <property name="y">103</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="from_file_entry">
+                    <property name="width-request">327</property>
+                    <property name="height-request">26</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <signal name="changed" handler="on_from_file_entry_changed" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">118</property>
+                    <property name="y">65</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="to_file_entry">
+                    <property name="width-request">326</property>
+                    <property name="height-request">26</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <signal name="changed" handler="on_to_file_entry_changed" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">119</property>
+                    <property name="y">103</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="convert_file_button">
+                    <property name="label" translatable="yes">button</property>
+                    <property name="width-request">236</property>
+                    <property name="height-request">34</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <signal name="clicked" handler="on_convert_file_button_clicked" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">7</property>
+                    <property name="y">144</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="width-request">100</property>
+                    <property name="height-request">80</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkRadioButton" id="wav2data_radio">
+                        <property name="label" translatable="yes">Wave file to Data file
+</property>
+                        <property name="width-request">100</property>
+                        <property name="height-request">26</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">False</property>
+                        <property name="draw-indicator">True</property>
+                        <property name="group">data2wave_ radio</property>
+                        <signal name="toggled" handler="on_wav2data_radio_toggled" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkRadioButton" id="data2wave_ radio">
+                        <property name="label" translatable="yes">Data file to Wave file
+</property>
+                        <property name="width-request">100</property>
+                        <property name="height-request">26</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">False</property>
+                        <property name="active">True</property>
+                        <property name="draw-indicator">True</property>
+                        <signal name="toggled" handler="on_data2wave_ radio_toggled" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="x">272</property>
+                    <property name="y">142</property>
+                  </packing>
+                </child>
               </object>
               <packing>
                 <property name="name">page1</property>
@@ -221,6 +372,8 @@
         </child>
         <child>
           <object class="GtkStackSwitcher" id="audio_stack_switcher">
+            <property name="width-request">263</property>
+            <property name="height-request">34</property>
             <property name="visible">True</property>
             <property name="can-focus">False</property>
             <property name="stack">top_stack</property>
