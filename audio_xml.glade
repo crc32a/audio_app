@@ -293,7 +293,7 @@
                 </child>
                 <child>
                   <object class="GtkButton" id="convert_file_button">
-                    <property name="label" translatable="yes">button</property>
+                    <property name="label" translatable="yes">Convert File</property>
                     <property name="width-request">236</property>
                     <property name="height-request">34</property>
                     <property name="visible">True</property>
