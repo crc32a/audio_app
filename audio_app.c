@@ -46,7 +46,7 @@ GdkDisplay *dis;
 
 char *tone_type_str[] = {"", "Sine", "Square", "Saw Tooth"};
 
-int (*sigfunc[])(cmp_t *, double, double, double, int, int) ={NULL, sigsine, sigsquare, sigsaw};
+int (*sigfunc[])(cmp_t *, double, double, double, int, int) = {NULL, sigsine, sigsquare, sigsaw};
 
 pthread_mutex_t tone_generate_lock;
 pthread_mutex_t gsargs_lock;
@@ -65,6 +65,7 @@ extern char _binary_audio_xml_glade_end[];
 extern char _binary_audio_xml_glade_size[];
 extern char _binary_audio_xml_glade_start[];
 
+// Print the message if DEBUG is set. NOP if not
 int dbgprintfimp(const char *fmt, va_list ap) {
     if (DEBUG) {
         vfprintf(stderr, fmt, ap);
@@ -72,6 +73,7 @@ int dbgprintfimp(const char *fmt, va_list ap) {
     return 0;
 }
 
+#if DEBUG
 int dbgprintf(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -79,6 +81,11 @@ int dbgprintf(const char *fmt, ...) {
     va_end(ap);
     return 0;
 }
+#else
+int dbgprintf(const char *fmt, ...) {
+    return 0;
+}
+#endif
 
 GtkWidget *get_widget(char *name) {
     return GTK_WIDGET(gtk_builder_get_object(bld, name));
@@ -142,13 +149,16 @@ void on_tone_save_button_clicked(GtkButton *b) {
         dbgprintf("save tone file: busy lock()\n");
         pthread_mutex_lock(&busy_lock);
         gdk_window_set_cursor(win, busy);
+        dbgprintf("save tone file: busy unlock()\n");
         pthread_mutex_unlock(&busy_lock);
+        dbgprintf("save tone file: gsargs lock()\n");
         pthread_mutex_lock(&gsargs_lock);
         gsargs.n = (int) (tone_sr * tone_secs + 1);
         gsargs.fn1 = tone_save_filename;
+        dbgprintf("save tone file: gsargs unlock()\n");
         pthread_mutex_unlock(&gsargs_lock);
         if (pthread_create(&th, NULL, savetonecaller, NULL) == 0) {
-            dbgprintf("Save tone file threade creqted\n");
+            dbgprintf("Save tone file thread creqted\n");
             pthread_detach(th);
         }
     }
@@ -175,11 +185,11 @@ void *savetonecaller(void *args) {
     }
     dbgprintf("savetonecaller: unlock tone_generate\n");
     pthread_mutex_unlock(&tone_generate_lock);
-    dbgprintf("savetonecaller: lock spinner\n");
+    dbgprintf("savetonecaller: lock busy\n");
     pthread_mutex_lock(&busy_lock);
     gdk_window_set_cursor(win, NULL);
-    dbgprintf("savetonecaller: unlock spinner\n");
-    pthread_mutex_lock(&busy_lock);
+    dbgprintf("savetonecaller: unlock nusy\n");
+    pthread_mutex_unlock(&busy_lock);
     dbgprintf("Save file thread exit\n");
     pthread_exit(NULL);
 }
@@ -272,6 +282,8 @@ int print_tone() {
     dbgprintf("\n");
     dbgprintf("Wave files\n");
     dbgprintf("---------------------------------------------\n");
+    dbgprintf("convert_to_filename: %s\n", convert_from_filename);
+    dbgprintf("convert_to_filename: %s\n", convert_to_filename);
 
     return 0;
 }
