@@ -38,6 +38,7 @@ GtkWidget *convert_sr_entry;
 GtkWidget *from_file_entry;
 GtkWidget *to_file_entry;
 GtkWidget *convert_file_button;
+GtkWidget *show_variables_button;
 
 GdkCursor *busy;
 GdkDisplay *dis;
@@ -267,7 +268,7 @@ char *get_entry_text(char *buff, GtkWidget *entry) {
     return buff;
 }
 
-int print_tone() {
+int print_variables() {
     char *in_format;
     char *out_format;
     dbgprintf("Tone Entries\n");
@@ -310,7 +311,7 @@ void on_generate_tone_button_clicked(GtkButton *b) {
     ssize_t tsize;
     GdkWindow *win;
 
-    print_tone();
+    print_variables();
     win = gtk_widget_get_window(window);
     dbgprintf("tone button: Busy lock()\n");
     pthread_mutex_lock(&busy_lock);
@@ -426,6 +427,17 @@ int is_toggled(GtkRadioButton *b) {
     return 0;
 }
 
+int set_toggle(GtkWidget *w, int boolval) {
+    GtkToggleButton *tb;
+    tb = GTK_TOGGLE_BUTTON(w);
+    if (boolval) {
+        gtk_toggle_button_set_active(tb, TRUE);
+        return 0;
+    }
+    gtk_toggle_button_set_active(tb, FALSE);
+    return 0;
+}
+
 void on_wav2data_radio_toggled(GtkRadioButton *b) {
     if (is_toggled(b)) {
         src_is_wave = 1;
@@ -435,10 +447,10 @@ void on_wav2data_radio_toggled(GtkRadioButton *b) {
 }
 
 void on_data2wave_radio_toggled(GtkRadioButton *b) {
-        if (is_toggled(b)) {
-        src_is_wave = 1;
-    } else {
+    if (is_toggled(b)) {
         src_is_wave = 0;
+    } else {
+        src_is_wave = 1;
     }
 }
 
@@ -458,6 +470,10 @@ void on_to_file_entry_changed(GtkEntry *e) {
 }
 
 void on_convert_file_button_clicked(GtkEntry *e) {
+}
+
+void on_show_variables_button_clicked(GtkButton *b) {
+    print_variables();
 }
 
 int init_globals(int argc, char **argv) {
@@ -491,6 +507,7 @@ int init_globals(int argc, char **argv) {
     from_file_entry = get_widget("from_file_entry");
     to_file_entry = get_widget("to_file_entry");
     convert_file_button = get_widget("convert_file_button");
+    show_variables_button = get_widget("show_variales_button");
 
 
     gtk_combo_box_set_active(GTK_COMBO_BOX(tone_combo), 0);
@@ -521,7 +538,9 @@ int init_globals(int argc, char **argv) {
     tone_data = NULL;
     dis = gtk_widget_get_display(window);
     busy = gdk_cursor_new_for_display(dis, GDK_WATCH);
-    src_is_wave = 0;
+    src_is_wave = 1;
+    set_toggle(data2wave_radio, 0);
+    set_toggle(wave2data_radio, 1);
     convert_sr = 44100;
     update_entrys();
     return 0;

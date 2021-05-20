@@ -31,9 +31,11 @@ char *get_entry_text(char *buff, GtkWidget *entry);
 int init_globals(int argc, char **argv);
 void *gensigcaller(void *);
 void *savetonecaller(void *);
-int print_tone();
+int print_variables();
+int is_toggled(GtkRadioButton *b);
 
 // Signals
+void on_show_variables_button_clicked(GtkButton *b);
 void on_tone_save_button_clicked(GtkButton *b);
 void on_tone_amp_entry_changed(GtkEntry *e);
 void on_tone_freq_entry_changed(GtkEntry *e);

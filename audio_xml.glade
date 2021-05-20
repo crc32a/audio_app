@@ -364,6 +364,32 @@
                 <property name="position">1</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkFixed">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <child>
+                  <object class="GtkButton" id="show_variables_button">
+                    <property name="label" translatable="yes">Show variables</property>
+                    <property name="width-request">100</property>
+                    <property name="height-request">20</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <signal name="clicked" handler="on_show_variables_button_clicked" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="x">8</property>
+                    <property name="y">26</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="name">page2</property>
+                <property name="title" translatable="yes">Debug</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="x">10</property>
