@@ -323,7 +323,6 @@
                         <property name="can-focus">True</property>
                         <property name="receives-default">False</property>
                         <property name="draw-indicator">True</property>
-                        <property name="group">data2wave_ radio</property>
                         <signal name="toggled" handler="on_wav2data_radio_toggled" swapped="no"/>
                       </object>
                       <packing>
@@ -343,7 +342,8 @@
                         <property name="receives-default">False</property>
                         <property name="active">True</property>
                         <property name="draw-indicator">True</property>
-                        <signal name="toggled" handler="on_data2wave_ radio_toggled" swapped="no"/>
+                        <property name="group">wav2data_radio</property>
+                        <signal name="toggled" handler="on_data2wave_radio_toggled" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>

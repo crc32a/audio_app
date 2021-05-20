@@ -34,7 +34,7 @@ GtkWidget *data2wave_radio;
 GtkWidget *wave2data_radio;
 GtkWidget *convert_to_file_button;
 GtkWidget *convert_from_button;
-GtkWidget *convert_sample_rate_entry;
+GtkWidget *convert_sr_entry;
 GtkWidget *from_file_entry;
 GtkWidget *to_file_entry;
 GtkWidget *convert_file_button;
@@ -58,14 +58,17 @@ int tone_type;
 double tone_amp;
 double tone_freq;
 double tone_phase;
-int tone_sr;
 double tone_secs;
+int tone_sr;
+int src_is_wave; // Is the source file wave or data
+int convert_sr;
 
 extern char _binary_audio_xml_glade_end[];
 extern char _binary_audio_xml_glade_size[];
 extern char _binary_audio_xml_glade_start[];
 
 // Print the message if DEBUG is set. NOP if not
+
 int dbgprintfimp(const char *fmt, va_list ap) {
     if (DEBUG) {
         vfprintf(stderr, fmt, ap);
@@ -74,6 +77,7 @@ int dbgprintfimp(const char *fmt, va_list ap) {
 }
 
 #if DEBUG
+
 int dbgprintf(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -82,6 +86,7 @@ int dbgprintf(const char *fmt, ...) {
     return 0;
 }
 #else
+
 int dbgprintf(const char *fmt, ...) {
     return 0;
 }
@@ -110,12 +115,13 @@ int set_entry_text(GtkWidget *w, char *fmt, ...) {
     return 0;
 }
 
-int update_tone_entrys() {
+int update_entrys() {
     set_entry_text(tone_amp_entry, "%f", tone_amp);
     set_entry_text(tone_freq_entry, "%f", tone_freq);
     set_entry_text(tone_phase_entry, "%f", tone_phase);
     set_entry_text(tone_sr_entry, "%d", tone_sr);
     set_entry_text(tone_secs_entry, "%f", tone_secs);
+    set_entry_text(convert_sr_entry, "%d", convert_sr);
 }
 
 void on_tone_save_button_clicked(GtkButton *b) {
@@ -212,17 +218,17 @@ void entry_to_variable(GtkEntry *e, void *val, enum dtype vtype) {
 
 void on_tone_amp_entry_changed(GtkEntry *e) {
     entry_to_variable(e, &tone_amp, DTYPE_DOUBLE);
-    update_tone_entrys();
+    update_entrys();
 }
 
 void on_tone_freq_entry_changed(GtkEntry *e) {
     entry_to_variable(e, &tone_freq, DTYPE_DOUBLE);
-    update_tone_entrys();
+    update_entrys();
 }
 
 void on_tone_phase_entry_changed(GtkEntry *e) {
     entry_to_variable(e, &tone_phase, DTYPE_DOUBLE);
-    update_tone_entrys();
+    update_entrys();
 }
 
 void on_tone_sr_entry_changed(GtkEntry *e) {
@@ -230,12 +236,12 @@ void on_tone_sr_entry_changed(GtkEntry *e) {
     if (tone_sr < 0) {
         tone_sr = 0;
     }
-    update_tone_entrys();
+    update_entrys();
 }
 
 void on_tone_secs_entry_changed(GtkEntry *e) {
     entry_to_variable(e, &tone_secs, DTYPE_DOUBLE);
-    update_tone_entrys();
+    update_entrys();
 }
 
 void on_tone_combo_changed(GtkComboBoxText *c) {
@@ -262,6 +268,8 @@ char *get_entry_text(char *buff, GtkWidget *entry) {
 }
 
 int print_tone() {
+    char *in_format;
+    char *out_format;
     dbgprintf("Tone Entries\n");
     dbgprintf("---------------------------------------------\n");
     dbgprintf("amplitutde: %s\n", get_entry_text(tstr, tone_amp_entry));
@@ -284,7 +292,16 @@ int print_tone() {
     dbgprintf("---------------------------------------------\n");
     dbgprintf("convert_to_filename: %s\n", convert_from_filename);
     dbgprintf("convert_to_filename: %s\n", convert_to_filename);
-
+    if (src_is_wave) {
+        in_format = "wave";
+        out_format = "data";
+    } else {
+        in_format = "data";
+        out_format = "wave";
+    }
+    dbgprintf("Conversion sample rate: %d\n", convert_sr);
+    dbgprintf("input format:  %s\n", in_format);
+    dbgprintf("output format: %s\n", out_format);
     return 0;
 }
 
@@ -402,10 +419,27 @@ void *gensigcaller(void *args) {
     dbgprintf("gensig: post exit\n");
 }
 
+int is_toggled(GtkRadioButton *b) {
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(b))) {
+        return 1;
+    }
+    return 0;
+}
+
 void on_wav2data_radio_toggled(GtkRadioButton *b) {
+    if (is_toggled(b)) {
+        src_is_wave = 1;
+    } else {
+        src_is_wave = 0;
+    }
 }
 
 void on_data2wave_radio_toggled(GtkRadioButton *b) {
+        if (is_toggled(b)) {
+        src_is_wave = 1;
+    } else {
+        src_is_wave = 0;
+    }
 }
 
 void on_convert_to_file_button_clicked(GtkButton *b) {
@@ -453,7 +487,7 @@ int init_globals(int argc, char **argv) {
     wave2data_radio = get_widget("wave2data_radio");
     convert_to_file_button = get_widget("convert_to_file_button");
     convert_from_button = get_widget("convert_from_file_BUTTON");
-    convert_sample_rate_entry = get_widget("convert_sample_rate_entry");
+    convert_sr_entry = get_widget("convert_sample_rate_entry");
     from_file_entry = get_widget("from_file_entry");
     to_file_entry = get_widget("to_file_entry");
     convert_file_button = get_widget("convert_file_button");
@@ -487,7 +521,9 @@ int init_globals(int argc, char **argv) {
     tone_data = NULL;
     dis = gtk_widget_get_display(window);
     busy = gdk_cursor_new_for_display(dis, GDK_WATCH);
-    update_tone_entrys();
+    src_is_wave = 0;
+    convert_sr = 44100;
+    update_entrys();
     return 0;
 }
 
