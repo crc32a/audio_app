@@ -1,4 +1,4 @@
-#include<stdarg.h>
+ #include<stdarg.h>
 #include"dft.h"
 
 #ifndef AUDIO_APP_H
@@ -15,9 +15,11 @@ typedef struct{
     int n;
 }gensig_args; 
 
+enum dtype {DTYPE_NONE, DTYPE_INT, DTYPE_FLOAT, DTYPE_DOUBLE, DTYPE_STR};
 
 #endif
 
+void entry_to_variable(GtkEntry *e,void *var, enum dtype vtype);
 GtkWidget *get_widget(char *name);
 int dbgprintfimp(const char *fmt, va_list ap);
 int dbgprintf(const char *fmt, ...);

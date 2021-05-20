@@ -52,6 +52,7 @@ int (*sigfunc[])(cmp_t *,double,double,double,int,int) =
 pthread_mutex_t tone_generate_lock;
 pthread_mutex_t gsargs_lock;
 pthread_mutex_t busy_lock;
+
 cmp_t *tone_data;
 gensig_args gsargs;
 int tone_type;
@@ -185,55 +186,48 @@ void *savetonecaller(void *args){
     pthread_exit(NULL);
 }
 
-void on_tone_amp_entry_changed(GtkEntry *e){
+void entry_to_variable(GtkEntry *e,void *val, enum dtype vtype){
     char *str;
-    double val;
-
     str = (char *)gtk_entry_get_text(e);
-    val = atof(str);
-    tone_amp = val;
+    switch(vtype){
+        case DTYPE_INT:
+            *(int *)val = atoi(str);
+            break;
+        case DTYPE_DOUBLE:
+            *(double *)val = atof(str);
+            break;
+        case DTYPE_FLOAT:
+            *(float *)val = atof(str);
+            break;
+    }
+}
+
+
+void on_tone_amp_entry_changed(GtkEntry *e){
+    entry_to_variable(e, &tone_amp, DTYPE_DOUBLE);
     update_tone_entrys();   
 }
 
 void on_tone_freq_entry_changed(GtkEntry *e){
-    char *str;
-    double val;
-
-    str = (char *)gtk_entry_get_text(e);
-    val = atof(str);
-    tone_freq = val;
+    entry_to_variable(e, &tone_freq, DTYPE_DOUBLE);
     update_tone_entrys();   
 }
 
 void on_tone_phase_entry_changed(GtkEntry *e){
-    char *str;
-    double val;
-
-    str = (char *)gtk_entry_get_text(e);
-    val = atof(str);
-    tone_phase = val;
+    entry_to_variable(e, &tone_phase, DTYPE_DOUBLE);
     update_tone_entrys();   
 }
 
 void on_tone_sr_entry_changed(GtkEntry *e){
-    char *str;
-    int val;
-
-    str = (char *)gtk_entry_get_text(e);
-    val = atoi(str);
-    if(val >= 0){
-        tone_sr = val;
+    entry_to_variable(e, &tone_sr, DTYPE_INT);
+    if(tone_sr < 0){
+        tone_sr = 0;
     }
     update_tone_entrys();   
 }
 
 void on_tone_secs_entry_changed(GtkEntry *e){
-    char *str;
-    double val;
-
-    str = (char *)gtk_entry_get_text(e);
-    val = atof(str);
-    tone_secs = val;
+    entry_to_variable(e, &tone_secs, DTYPE_DOUBLE);
     update_tone_entrys();   
 }
 
@@ -277,6 +271,11 @@ int print_tone(){
     dbgprintf("phase:       %f\n", tone_phase);
     dbgprintf("sample rate: %d\n", tone_sr);
     dbgprintf("seconds:     %f\n", tone_secs);
+    dbgprintf("\n");
+    dbgprintf("\n");
+    dbgprintf("Wave files\n");
+    dbgprintf("---------------------------------------------\n");
+
     return 0;
 }
 
