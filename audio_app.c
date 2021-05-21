@@ -13,14 +13,13 @@
 #include"dft.h"
 #include"audio_app.h"
 
-#define MAXFNSIZE 1023
-#define STRSIZE 255
+#define STRSIZE 1023
 
-char tone_save_filename[MAXFNSIZE + 1];
-char convert_from_filename[MAXFNSIZE + 1];
-char convert_to_filename[MAXFNSIZE + 1];
 
-char tstr[STRSIZE + 1];
+char *tone_save_filename;
+char *convert_from_filename;
+char *convert_to_filename;
+char *tstr;
 
 GtkWidget *window;
 GtkBuilder *bld;
@@ -152,7 +151,7 @@ void on_tone_save_button_clicked(GtkButton *b) {
     res = gtk_dialog_run(GTK_DIALOG(dialog));
     if (res == GTK_RESPONSE_ACCEPT) {
         file_name = gtk_file_chooser_get_filename(chooser);
-        strncpy(tone_save_filename, file_name, MAXFNSIZE);
+        strncpy(tone_save_filename, file_name, STRSIZE);
         g_free(file_name);
         dbgprintf("SAVEING %s\n", tone_save_filename);
         dbgprintf("save tone file: busy lock()\n");
@@ -219,6 +218,13 @@ void entry_to_variable(GtkEntry *e, void *val, enum dtype vtype) {
         case DTYPE_FLOAT:
             *(float *) val = atof(str);
             break;
+        case DTYPE_STR:
+            strcpy((char *) val, "");
+            if (str != NULL) {
+                strncpy((char *) val, str, STRSIZE);
+            }
+            break;
+
     }
 }
 
@@ -466,12 +472,15 @@ void on_convert_from_button_clicked(GtkButton *b) {
 }
 
 void on_convert_sample_rate_entry_changed(GtkEntry *e) {
+    entry_to_variable(e, &convert_sr, DTYPE_INT);
 }
 
 void on_from_file_entry_changed(GtkEntry *e) {
+    entry_to_variable(e, convert_from_filename, DTYPE_STR);
 }
 
 void on_to_file_entry_changed(GtkEntry *e) {
+    entry_to_variable(e, convert_to_filename, DTYPE_STR);
 }
 
 void on_convert_file_button_clicked(GtkEntry *e) {
@@ -485,12 +494,34 @@ int init_globals(int argc, char **argv) {
     char *glade_start;
     char *glade_end;
     int64_t glade_size;
+    size_t tsize;
 
     glade_end = _binary_audio_xml_glade_end;
     glade_start = _binary_audio_xml_glade_start;
     glade_size = glade_end - glade_start;
+    tsize = STRSIZE + 1;
+    tone_save_filename = (char *) malloc(tsize);
+    if (tone_save_filename == NULL) {
+        printf("Failed to allocate %zi bytes for ", tsize);
+        printf("tone save_filename\n");
+    }
+    convert_from_filename = (char *) malloc(tsize);
+    if (convert_from_filename == NULL) {
+        printf("Failed to allocate %zi bytes for ", tsize);
+        printf("convert_from_filename\n");
+    }
+    convert_to_filename = (char *) malloc(tsize);
+    if (convert_to_filename == NULL) {
+        printf("Failed to allocate %zi bytes for ", tsize);
+        printf("convert_to_filename\n");
+    }
+    tstr = (char *) malloc(tsize);
+    if (tstr == NULL) {
+        printf("Failed to allocate %zi bytes for ", tsize);
+        printf("tstr\n");
+    }
 
-    strncpy(tone_save_filename, "untitled.dat", MAXFNSIZE);
+    strncpy(tone_save_filename, "untitled.dat", STRSIZE);
     gtk_init(&argc, &argv);
     bld = gtk_builder_new_from_string(glade_start, glade_size);
     window = get_widget("window");
@@ -517,23 +548,23 @@ int init_globals(int argc, char **argv) {
 
     gtk_combo_box_set_active(GTK_COMBO_BOX(tone_combo), 0);
     if (pthread_mutex_init(&tone_generate_lock, NULL) != 0) {
-        dbgprintf("Failed to allocate pthread mutex lock for");
-        dbgprintf(" tone generator\n");
+        printf("Failed to allocate pthread mutex lock for");
+        printf(" tone generator\n");
         return -1;
     }
     if (pthread_mutex_init(&gsargs_lock, NULL) != 0) {
-        dbgprintf("Failed to allocate pthread mutex lock for");
-        dbgprintf(" tone generator\n");
+        printf("Failed to allocate pthread mutex lock for");
+        printf(" tone generator\n");
         return -1;
     }
     if (pthread_mutex_init(&busy_lock, NULL) != 0) {
-        dbgprintf("Failed to allocate pthread mutex lock for");
-        dbgprintf(" busy icon\n");
+        printf("Failed to allocate pthread mutex lock for");
+        printf(" busy icon\n");
     }
 
-    strncpy(tone_save_filename, "", MAXFNSIZE);
-    strncpy(convert_from_filename, "", MAXFNSIZE);
-    strncpy(convert_to_filename, "", MAXFNSIZE);
+    strncpy(tone_save_filename, "", STRSIZE);
+    strncpy(convert_from_filename, "", STRSIZE);
+    strncpy(convert_to_filename, "", STRSIZE);
     tone_type = 1;
     tone_amp = 1.0;
     tone_freq = 440.0;
