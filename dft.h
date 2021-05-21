@@ -51,13 +51,3 @@ int biquadcoeff(double **aa, double **bo, double sr,
         double f, double q);
 int biquadfilter(cmp_t *y, cmp_t *x, double *a, double *b,
         int nc, int n);
-
-ring_t *ring_init(int size, int *err);
-int ring_print(ring_t *r);
-int ring_used(ring_t *r);
-int ring_size(ring_t *r);
-int ring_free(ring_t *r);
-int ring_add(ring_t *r, cmp_t *data, int n);
-int ring_get(ring_t *r, cmp_t *data, int n);
-int ring_dec(ring_t *r, int n);
-int ring_resize(ring_t *r, int n, int *err);
