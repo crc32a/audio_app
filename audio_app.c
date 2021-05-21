@@ -5,6 +5,7 @@
 #include<gtk/gtk.h>
 #include<gtk/gtkx.h>
 #include<pthread.h>
+#include<inttypes.h>
 #include<stdarg.h>
 #include<ctype.h>
 #include<glib.h>
@@ -47,7 +48,8 @@ GdkDisplay *dis;
 
 char *tone_type_str[] = {"", "Sine", "Square", "Saw Tooth"};
 
-int (*sigfunc[])(cmp_t *, double, double, double, int, int) = {NULL, sigsine, sigsquare, sigsaw};
+int (*sigfunc[])(cmp_t *, double, double, double, int, int64_t) = \
+    {NULL, sigsine, sigsquare, sigsaw};
 
 pthread_mutex_t tone_generate_lock;
 pthread_mutex_t gsargs_lock;
@@ -208,6 +210,9 @@ void entry_to_variable(GtkEntry *e, void *val, enum dtype vtype) {
         case DTYPE_INT:
             *(int *) val = atoi(str);
             break;
+        case DTYPE_I64:
+            *(int64_t *) val = atol(str);
+            break;
         case DTYPE_DOUBLE:
             *(double *) val = atof(str);
             break;
@@ -324,7 +329,7 @@ void on_generate_tone_button_clicked(GtkButton *b) {
     gsargs.freq = tone_freq;
     gsargs.phase = tone_phase;
     gsargs.sr = tone_sr;
-    gsargs.n = (int) (tone_sr * tone_secs + 1);
+    gsargs.n = (int64_t) (tone_sr * tone_secs + 1);
     tsize = sizeof (cmp_t) * gsargs.n;
     dbgprintf("n = %d tsize = %d\n", gsargs.n, tsize);
     dbgprintf("tone button: tone lock\n");
@@ -377,10 +382,10 @@ void *gensigcaller(void *args) {
     double f;
     double p;
     int s;
-    int n;
-
-    int (*funcptr)(cmp_t *, double, double, double, int, int);
+    int64_t n;
     int i;
+
+    int (*funcptr)(cmp_t *, double, double, double, int, int64_t);
 
 
     if (tone_type < 1 || tone_type > 3) {
@@ -479,7 +484,7 @@ void on_show_variables_button_clicked(GtkButton *b) {
 int init_globals(int argc, char **argv) {
     char *glade_start;
     char *glade_end;
-    int glade_size;
+    int64_t glade_size;
 
     glade_end = _binary_audio_xml_glade_end;
     glade_start = _binary_audio_xml_glade_start;

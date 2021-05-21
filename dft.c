@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<stdio.h>
+#include<inttypes.h>
 #include<math.h>
 #include<dft.h>
 
@@ -61,9 +62,9 @@ int sqrt_cmp(cmp_t *a, cmp_t *p) {
     return 0;
 }
 
-int dft_cmp(cmp_t *a, cmp_t *p, int n) {
-    int k;
-    int t;
+int dft_cmp(cmp_t *a, cmp_t *p, int64_t n) {
+    int64_t k;
+    int64_t t;
     double rsum;
     double isum;
     double thc = 2 * M_PI / (double) n;
@@ -86,9 +87,9 @@ int dft_cmp(cmp_t *a, cmp_t *p, int n) {
     return 0;
 }
 
-int idft_cmp(cmp_t *a, cmp_t *p, int n) {
-    int k;
-    int t;
+int idft_cmp(cmp_t *a, cmp_t *p, int64_t n) {
+    int64_t k;
+    int64_t t;
     double rsum;
     double isum;
     double thc = 2 * M_PI / (double) n;
@@ -111,8 +112,8 @@ int idft_cmp(cmp_t *a, cmp_t *p, int n) {
     return 0;
 }
 
-int fout_cmp(FILE *fp, cmp_t *p, int n) {
-    int i;
+int fout_cmp(FILE *fp, cmp_t *p, int64_t n) {
+    int64_t i;
     for (i = 0; i < n; i++) {
         fprintf(fp, "wav[%7d]=%f,%f\n", i, p[i].r, p[i].i);
     }
@@ -120,9 +121,9 @@ int fout_cmp(FILE *fp, cmp_t *p, int n) {
 }
 
 int sigsine(cmp_t *o, double a, double f, double ph,
-        int s, int n) {
+        int s, int64_t n) {
     double cons;
-    int i;
+    int64_t i;
 
     cons = 2 * M_PI * f / (double) s;
     for (i = 0; i < n; i++) {
@@ -133,11 +134,11 @@ int sigsine(cmp_t *o, double a, double f, double ph,
 }
 
 int sigsquare(cmp_t *o, double a, double f, double ph,
-        int s, int n) {
+        int s, int64_t n) {
     double wl;
     double th;
-    int t;
-    int i;
+    int64_t t;
+    int64_t i;
 
     wl = f / s;
     th = s * ph / (M_PI * f);
@@ -150,12 +151,12 @@ int sigsquare(cmp_t *o, double a, double f, double ph,
 }
 
 int sigsaw(cmp_t *out, double a, double f, double ph,
-        int s, int n) {
+        int s, int64_t n) {
     double wl;
     double m;
     double a2;
     double th;
-    int i;
+    int64_t i;
 
     wl = s / f;
     a2 = 2.0 * a;
@@ -169,8 +170,8 @@ int sigsaw(cmp_t *out, double a, double f, double ph,
     return 0;
 }
 
-int sigmix(cmp_t *out, cmp_t * in1, cmp_t *in2, double a, int n) {
-    int i;
+int sigmix(cmp_t *out, cmp_t * in1, cmp_t *in2, double a, int64_t n) {
+    int64_t i;
     for (i = 0; i < n; i++) {
         out[i].r = a * (in1[i].r + in2[i].r);
         out[i].i = a * (in1[i].i + in2[i].i);
@@ -178,12 +179,12 @@ int sigmix(cmp_t *out, cmp_t * in1, cmp_t *in2, double a, int n) {
     return 0;
 }
 
-int dft_fwrite(char *file_name, cmp_t *v, int n) {
+int64_t dft_fwrite(char *file_name, cmp_t *v, int64_t n) {
     FILE *fp;
-    int i;
+    int64_t i;
     int nwrite;
     int nwritten;
-    int ntotal;
+    int64_t ntotal;
 
     ntotal = 0;
     fp = fopen(file_name, "w");
@@ -202,14 +203,13 @@ int dft_fwrite(char *file_name, cmp_t *v, int n) {
     return ntotal;
 }
 
-int dft_fread(char *file_name, cmp_t *v, int n) {
+int64_t dft_fread(char *file_name, cmp_t *v, int64_t n) {
     FILE *fp;
-    ;
-    int i;
+    int64_t i;
     int nread;
     int nreaded;
     int nitems;
-    int ntotal;
+    int64_t ntotal;
 
     nitems = nsize(file_name);
     if (nitems < 0) {
@@ -237,9 +237,9 @@ int dft_fread(char *file_name, cmp_t *v, int n) {
     return ntotal;
 }
 
-int nsize(char *file_name) {
+int64_t nsize(char *file_name) {
     FILE *fp;
-    int bsize;
+    int64_t bsize;
     fp = fopen(file_name, "r");
     if (fp == NULL) {
         return -1;
@@ -249,8 +249,9 @@ int nsize(char *file_name) {
     return bsize / sizeof (cmp_t);
 }
 
-long fsize(FILE *file) {
-    long old_pos, size;
+int64_t fsize(FILE *file) {
+    int64_t old_pos;
+    int64_t size;
     old_pos = ftell(file);
     fseek(file, 0L, SEEK_END);
     size = ftell(file);
@@ -258,8 +259,8 @@ long fsize(FILE *file) {
     return (size);
 }
 
-int sigscale(cmp_t *out, cmp_t *in, double scale, int n) {
-    int i;
+int sigscale(cmp_t *out, cmp_t *in, double scale, int64_t n) {
+    int64_t i;
     for (i = 0; i < n; i++) {
         out[i].r = scale * in[i].r;
         out[i].i = scale * in[i].i;
@@ -267,14 +268,14 @@ int sigscale(cmp_t *out, cmp_t *in, double scale, int n) {
     return 0;
 }
 
-int fwrite_wav(char *file_name, cmp_t *in, int sr, int n) {
+int64_t fwrite_wav(char *file_name, cmp_t *in, int sr, int64_t n) {
     double *wav;
     SNDFILE *fp;
     SF_INFO sinfo;
-    int nwrite;
-    int nwritten;
-    int tsize;
-    int i;
+    int64_t nwrite;
+    int64_t nwritten;
+    size_t tsize;
+    int64_t i;
 
     memset(&sinfo, 0, sizeof (sinfo));
     sinfo.frames = n;
@@ -316,8 +317,8 @@ int fwrite_wav(char *file_name, cmp_t *in, int sr, int n) {
     return 0;
 }
 
-double normalize_r(cmp_t *wav, int n) {
-    int i;
+double normalize_r(cmp_t *wav, int64_t n) {
+    int64_t i;
     double max;
     double f;
     double t;
@@ -333,8 +334,8 @@ double normalize_r(cmp_t *wav, int n) {
     return (max);
 }
 
-double normalize_i(cmp_t *wav, int n) {
-    int i;
+double normalize_i(cmp_t *wav, int64_t n) {
+    int64_t i;
     double max;
     double f;
     double t;
@@ -350,9 +351,9 @@ double normalize_i(cmp_t *wav, int n) {
     return (max);
 }
 
-double average(double *p, int n) {
+double average(double *p, int64_t n) {
     double sum = 0.0;
-    int i;
+    int64_t i;
 
     for (i = 0; i < n; i++) {
         sum += p[i];
@@ -360,11 +361,11 @@ double average(double *p, int n) {
     return sum / n;
 }
 
-double stddev(double *p, int n) {
+double stddev(double *p, int64_t n) {
     double sum;
     double avg;
     double tmp;
-    int i;
+    int64_t i;
 
     sum = 0.0;
     for (i = 0; i < n; i++) {
@@ -379,8 +380,8 @@ double stddev(double *p, int n) {
     return sqrt(sum / n);
 }
 
-int e1filter(cmp_t *out, cmp_t *in, int n) {
-    int i;
+int e1filter(cmp_t *out, cmp_t *in, int64_t n) {
+    int64_t i;
 
     out[0].r = 0.0;
     out[0].i = 0.0;
@@ -391,8 +392,8 @@ int e1filter(cmp_t *out, cmp_t *in, int n) {
     return 0;
 }
 
-int e2filter(cmp_t *out, cmp_t *in, double a, int n) {
-    int i;
+int e2filter(cmp_t *out, cmp_t *in, double a, int64_t n) {
+    int64_t i;
 
     out[0].r = in[0].r;
     out[0].i = in[1].i;
@@ -404,16 +405,16 @@ int e2filter(cmp_t *out, cmp_t *in, double a, int n) {
     return 0;
 }
 
-int fread_wav(char *file_name, cmp_t **p) {
+int64_t fread_wav(char *file_name, cmp_t **p) {
     SNDFILE *fp;
     SF_INFO si;
     double *dbuff;
     cmp_t *out;
-    int tsize;
+    size_t tsize;
+    int64_t nread;
+    int64_t n;
+    int64_t i;
     int channels;
-    int nread;
-    int n;
-    int i;
 
     *p = NULL;
     si.format = 0;
@@ -462,7 +463,7 @@ int biquadcoeff(double **ao, double **bo, double sr,
     double k;
     double norm;
     double k2;
-    int tsize;
+    size_t tsize;
 
     tsize = sizeof (double) * 3;
     a = (double *) malloc(tsize);
@@ -489,10 +490,10 @@ int biquadcoeff(double **ao, double **bo, double sr,
 }
 
 int biquadfilter(cmp_t *y, cmp_t *x, double *a, double *b,
-        int nc, int n) {
+        int nc, int64_t n) {
     double sum;
-    int i;
-    int j;
+    int64_t i;
+    int64_t j;
 
 
     for (i = 0; i < nc; i++) {

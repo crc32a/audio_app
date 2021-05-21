@@ -1,4 +1,5 @@
 #include<stdarg.h>
+#include<inttypes.h>
 #include"dft.h"
 
 #ifndef AUDIO_APP_H
@@ -12,11 +13,11 @@ typedef struct {
     double freq;
     double phase;
     int sr;
-    int n;
+    int64_t n;
 } gensig_args;
 
 enum dtype {
-    DTYPE_NONE, DTYPE_INT, DTYPE_FLOAT, DTYPE_DOUBLE, DTYPE_STR
+    DTYPE_NONE, DTYPE_INT, DTYPE_FLOAT, DTYPE_DOUBLE, DTYPE_STR, DTYPE_I64
 };
 
 #endif
