@@ -235,15 +235,15 @@
                 </child>
                 <child>
                   <object class="GtkButton" id="convert_from_button">
-                    <property name="label" translatable="yes">From File</property>
+                    <property name="label" translatable="yes">Source File</property>
                     <property name="name">convert_rfrom_button</property>
-                    <property name="width-request">102</property>
+                    <property name="width-request">123</property>
                     <property name="height-request">34</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
                     <property name="receives-default">True</property>
                     <property name="tooltip-text" translatable="yes">File to load</property>
-                    <signal name="clicked" handler="on_convert_from_button_clicked" swapped="no"/>
+                    <signal name="clicked" handler="on_convert_from_file_button_clicked" swapped="no"/>
                   </object>
                   <packing>
                     <property name="x">10</property>
@@ -252,9 +252,9 @@
                 </child>
                 <child>
                   <object class="GtkButton" id="convert_to_file_button">
-                    <property name="label" translatable="yes">To File</property>
-                    <property name="width-request">100</property>
-                    <property name="height-request">34</property>
+                    <property name="label" translatable="yes">Destinaition File</property>
+                    <property name="width-request">123</property>
+                    <property name="height-request">27</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
                     <property name="receives-default">True</property>
@@ -268,27 +268,29 @@
                 <child>
                   <object class="GtkEntry" id="from_file_entry">
                     <property name="width-request">327</property>
-                    <property name="height-request">26</property>
+                    <property name="height-request">31</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
+                    <property name="tooltip-text" translatable="yes">Sets the source of the conversion</property>
                     <signal name="changed" handler="on_from_file_entry_changed" swapped="no"/>
                   </object>
                   <packing>
-                    <property name="x">118</property>
-                    <property name="y">65</property>
+                    <property name="x">136</property>
+                    <property name="y">66</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkEntry" id="to_file_entry">
-                    <property name="width-request">326</property>
-                    <property name="height-request">26</property>
+                    <property name="width-request">330</property>
+                    <property name="height-request">28</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
+                    <property name="tooltip-text" translatable="yes">Sets the destination file for the cnversion</property>
                     <signal name="changed" handler="on_to_file_entry_changed" swapped="no"/>
                   </object>
                   <packing>
-                    <property name="x">119</property>
-                    <property name="y">103</property>
+                    <property name="x">134</property>
+                    <property name="y">105</property>
                   </packing>
                 </child>
                 <child>
@@ -355,6 +357,30 @@
                   <packing>
                     <property name="x">272</property>
                     <property name="y">142</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="from_file_label">
+                    <property name="width-request">59</property>
+                    <property name="height-request">26</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                  </object>
+                  <packing>
+                    <property name="x">465</property>
+                    <property name="y">67</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="to_file_label">
+                    <property name="width-request">59</property>
+                    <property name="height-request">26</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                  </object>
+                  <packing>
+                    <property name="x">465</property>
+                    <property name="y">102</property>
                   </packing>
                 </child>
               </object>

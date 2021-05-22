@@ -21,8 +21,8 @@ char *convert_from_filename;
 char *convert_to_filename;
 char *tstr;
 
-GtkWidget *window;
 GtkBuilder *bld;
+GtkWidget *window;
 GtkWidget *tone_combo;
 GtkWidget *tone_amp_entry;
 GtkWidget *tone_freq_entry;
@@ -39,6 +39,8 @@ GtkWidget *from_file_entry;
 GtkWidget *to_file_entry;
 GtkWidget *convert_file_button;
 GtkWidget *show_variables_button;
+GtkWidget *from_file_label;
+GtkWidget *to_file_label;
 
 GdkCursor *busy;
 GdkDisplay *dis;
@@ -51,11 +53,11 @@ int (*sigfunc[])(cmp_t *, double, double, double, int, int64_t) = \
     {NULL, sigsine, sigsquare, sigsaw};
 
 pthread_mutex_t tone_generate_lock;
-pthread_mutex_t gsargs_lock;
+pthread_mutex_t args_lock;
 pthread_mutex_t busy_lock;
 
 cmp_t *tone_data;
-gensig_args gsargs;
+thread_args targs;
 int tone_type;
 double tone_amp;
 double tone_freq;
@@ -98,22 +100,45 @@ GtkWidget *get_widget(char *name) {
     return GTK_WIDGET(gtk_builder_get_object(bld, name));
 }
 
+int error_dialog(char *fmt, ...) {
+    GtkWidget *dialog;
+    char *msg;
+    va_list ap;
+
+    msg = (char *) malloc(STRSIZE + 1);
+    if (msg == NULL) {
+        return -1;
+    }
+
+    va_start(ap, fmt);
+    vsnprintf(msg, STRSIZE, fmt, ap);
+    va_end(ap);
+
+    dialog = gtk_message_dialog_new(GTK_WINDOW(window),
+            GTK_DIALOG_MODAL,
+            GTK_MESSAGE_ERROR,
+            GTK_BUTTONS_CLOSE,
+            msg
+            );
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+    free(msg);
+    return 0;
+}
+
 int set_entry_text(GtkWidget *w, char *fmt, ...) {
+    char *msg;
     GtkEntry *e;
     va_list ap;
 
+    msg = (char *) malloc(STRSIZE + 1);
     e = GTK_ENTRY(w);
     va_start(ap, fmt);
-    if (strcmp(fmt, "%f") == 0) {
-        snprintf(tstr, STRSIZE, "%f", va_arg(ap, double));
-    } else if (strcmp(fmt, "%d") == 0) {
-        snprintf(tstr, STRSIZE, "%d", va_arg(ap, int));
-    } else {
-        strcpy(tstr, "");
-    }
+    vsnprintf(msg, STRSIZE, fmt, ap);
     va_end(ap);
-    dbgprintf("setting text to %s\n", tstr);
-    gtk_entry_set_text(e, (const gchar *) tstr);
+    dbgprintf("setting text to %s\n", msg);
+    gtk_entry_set_text(e, (const gchar *) msg);
+    free(msg);
     return 0;
 }
 
@@ -123,7 +148,13 @@ int update_entrys() {
     set_entry_text(tone_phase_entry, "%f", tone_phase);
     set_entry_text(tone_sr_entry, "%d", tone_sr);
     set_entry_text(tone_secs_entry, "%f", tone_secs);
+}
+
+int update_convert_entrys() {
+    set_entry_text(from_file_entry, "%s", convert_from_filename);
+    set_entry_text(to_file_entry, "%s", convert_to_filename);
     set_entry_text(convert_sr_entry, "%d", convert_sr);
+    return 0;
 }
 
 void on_tone_save_button_clicked(GtkButton *b) {
@@ -160,11 +191,11 @@ void on_tone_save_button_clicked(GtkButton *b) {
         dbgprintf("save tone file: busy unlock()\n");
         pthread_mutex_unlock(&busy_lock);
         dbgprintf("save tone file: gsargs lock()\n");
-        pthread_mutex_lock(&gsargs_lock);
-        gsargs.n = (int) (tone_sr * tone_secs + 1);
-        gsargs.fn1 = tone_save_filename;
+        pthread_mutex_lock(&args_lock);
+        targs.n = (int) (tone_sr * tone_secs + 1);
+        targs. tone_file = tone_save_filename;
         dbgprintf("save tone file: gsargs unlock()\n");
-        pthread_mutex_unlock(&gsargs_lock);
+        pthread_mutex_unlock(&args_lock);
         if (pthread_create(&th, NULL, savetonecaller, NULL) == 0) {
             dbgprintf("Save tone file thread creqted\n");
             pthread_detach(th);
@@ -174,17 +205,15 @@ void on_tone_save_button_clicked(GtkButton *b) {
 }
 
 void *savetonecaller(void *args) {
-    GdkWindow *win;
     char *file_name;
-    int n;
+    int64_t n;
 
-    win = gtk_widget_get_window(window);
     dbgprintf("savetonecaller: lock gsargs\n");
-    pthread_mutex_lock(&gsargs_lock);
-    n = gsargs.n;
-    file_name = gsargs.fn1;
+    pthread_mutex_lock(&args_lock);
+    n = targs.n;
+    file_name = targs.tone_file;
     dbgprintf("savetonecaller: unlock gsargs\n");
-    pthread_mutex_unlock(&gsargs_lock);
+    pthread_mutex_unlock(&args_lock);
     dbgprintf("savetonecaller: lock tone_generate\n");
     pthread_mutex_lock(&tone_generate_lock);
     dbgprintf("savetonecaller: saving file\n");
@@ -193,11 +222,7 @@ void *savetonecaller(void *args) {
     }
     dbgprintf("savetonecaller: unlock tone_generate\n");
     pthread_mutex_unlock(&tone_generate_lock);
-    dbgprintf("savetonecaller: lock busy\n");
-    pthread_mutex_lock(&busy_lock);
-    gdk_window_set_cursor(win, NULL);
-    dbgprintf("savetonecaller: unlock nusy\n");
-    pthread_mutex_unlock(&busy_lock);
+    stop_spinlock("savetonecaller");
     dbgprintf("Save file thread exit\n");
     pthread_exit(NULL);
 }
@@ -317,27 +342,46 @@ int print_variables() {
     return 0;
 }
 
+int start_spinlock(char *calling_func_name) {
+    GdkWindow *win;
+
+    win = gtk_widget_get_window(window);
+    dbgprintf("%s: Busy lock()\n", calling_func_name);
+    pthread_mutex_lock(&busy_lock);
+    dbgprintf("%s: starting busy\n", calling_func_name);
+    gdk_window_set_cursor(win, busy);
+    dbgprintf("%s: busy unlock\n", calling_func_name);
+    pthread_mutex_unlock(&busy_lock);
+    return 0;
+}
+
+int stop_spinlock(char *calling_func_name) {
+    GdkWindow *win;
+
+    win = gtk_widget_get_window(window);
+    dbgprintf("%s: trying busylock (to stop it)\n", calling_func_name);
+    pthread_mutex_trylock(&busy_lock);
+    dbgprintf("%s: clearing spinner\n", calling_func_name);
+    gdk_window_set_cursor(win, NULL);
+    dbgprintf("%s: unlocking busylock\n", calling_func_name);
+    pthread_mutex_unlock(&busy_lock);
+    return 0;
+}
+
 void on_generate_tone_button_clicked(GtkButton *b) {
     pthread_t th;
     ssize_t tsize;
-    GdkWindow *win;
 
     print_variables();
-    win = gtk_widget_get_window(window);
-    dbgprintf("tone button: Busy lock()\n");
-    pthread_mutex_lock(&busy_lock);
-    dbgprintf("tone button: starting busy\n");
-    gdk_window_set_cursor(win, busy);
-    pthread_mutex_unlock(&busy_lock);
-    dbgprintf("tone_button: sbusy unlock\n");
-    pthread_mutex_lock(&gsargs_lock);
-    gsargs.amp = tone_amp;
-    gsargs.freq = tone_freq;
-    gsargs.phase = tone_phase;
-    gsargs.sr = tone_sr;
-    gsargs.n = (int64_t) (tone_sr * tone_secs + 1);
-    tsize = sizeof (cmp_t) * gsargs.n;
-    dbgprintf("n = %d tsize = %d\n", gsargs.n, tsize);
+    start_spinlock("tone_button");
+    pthread_mutex_lock(&args_lock);
+    targs.amp = tone_amp;
+    targs.freq = tone_freq;
+    targs.phase = tone_phase;
+    targs.sr = tone_sr;
+    targs.n = (int64_t) (tone_sr * tone_secs + 1);
+    tsize = sizeof (cmp_t) * targs.n;
+    dbgprintf("n = %d tsize = %d\n", targs.n, tsize);
     dbgprintf("tone button: tone lock\n");
     pthread_mutex_lock(&tone_generate_lock);
     if (tone_data != NULL) {
@@ -345,12 +389,12 @@ void on_generate_tone_button_clicked(GtkButton *b) {
         free(tone_data);
         tone_data = NULL;
     }
-    dbgprintf("tone button: malloc %d bytes", tsize);
+    dbgprintf("tone button: malloc %zi bytes", tsize);
     dbgprintf(" for tone_data\n");
     if (tsize > 0) {
         tone_data = (cmp_t *) malloc(tsize);
     } else {
-        dbgprintf("tsize %d out of range ", tsize);
+        dbgprintf("tsize %zi out of range ", tsize);
         dbgprintf("for tone_data %p\n", tone_data);
     }
     if (tone_data == NULL) {
@@ -368,17 +412,15 @@ void on_generate_tone_button_clicked(GtkButton *b) {
             dbgprintf("no thread created tone button: ");
             dbgprintf("unlock busy");
             dbgprintf(" pthread failed\n");
-            gdk_window_set_cursor(win, NULL);
-            pthread_mutex_unlock(&busy_lock);
+            stop_spinlock("tone_button");
         }
     } else {
         dbgprintf("no thread created tone button: ");
         dbgprintf("unlock busy pthread failed\n");
-        gdk_window_set_cursor(win, NULL);
-        pthread_mutex_unlock(&busy_lock);
+        stop_spinlock("tone_button");
     }
     dbgprintf("tone button: gsargs unlock\n");
-    pthread_mutex_unlock(&gsargs_lock);
+    pthread_mutex_unlock(&args_lock);
 }
 
 void *gensigcaller(void *args) {
@@ -403,15 +445,15 @@ void *gensigcaller(void *args) {
         dbgprintf("%d = %s = %p\n", i, tone_type_str[i], sigfunc[i]);
     }
     dbgprintf("gensig: gsargs lock\n");
-    pthread_mutex_lock(&gsargs_lock);
-    a = gsargs.amp;
-    f = gsargs.freq;
-    p = gsargs.phase;
-    s = gsargs.sr;
-    n = gsargs.n;
+    pthread_mutex_lock(&args_lock);
+    a = targs.amp;
+    f = targs.freq;
+    p = targs.phase;
+    s = targs.sr;
+    n = targs.n;
     dbgprintf("gsigargs = %p,%f,%f,%f,%i,%i\n", tone_data, a, f, p, s, n);
     dbgprintf("gensig: gsargs unlock\n");
-    pthread_mutex_unlock(&gsargs_lock);
+    pthread_mutex_unlock(&args_lock);
     dbgprintf("Current function pointer is set to ");
     dbgprintf("%d = %p\n", tone_type, funcptr);
     dbgprintf("gensig: tone lock\n");
@@ -419,13 +461,7 @@ void *gensigcaller(void *args) {
     (*funcptr)(tone_data, a, f, p, s, n);
     dbgprintf("gensig: tone unlock\n");
     pthread_mutex_unlock(&tone_generate_lock);
-    dbgprintf("gensig: busy lock\n");
-    pthread_mutex_lock(&busy_lock);
-    dbgprintf("gensig: stoppong busy\n");
-    win = gtk_widget_get_window(window);
-    gdk_window_set_cursor(win, NULL);
-    dbgprintf("gensig: busy unlock\n");
-    pthread_mutex_unlock(&busy_lock);
+    stop_spinlock("gensig");
     dbgprintf("gensig: thread exit\n");
     pthread_exit(NULL);
     dbgprintf("gensig: post exit\n");
@@ -455,6 +491,7 @@ void on_wav2data_radio_toggled(GtkRadioButton *b) {
     } else {
         src_is_wave = 0;
     }
+    update_convert_labels();
 }
 
 void on_data2wave_radio_toggled(GtkRadioButton *b) {
@@ -463,12 +500,55 @@ void on_data2wave_radio_toggled(GtkRadioButton *b) {
     } else {
         src_is_wave = 1;
     }
+    update_convert_labels();
+}
+
+int update_convert_labels() {
+    if (src_is_wave) {
+        gtk_label_set_text(GTK_LABEL(from_file_label), "(Wav)");
+        gtk_label_set_text(GTK_LABEL(to_file_label), "(Data)");
+    } else {
+        gtk_label_set_text(GTK_LABEL(from_file_label), "(Data)");
+        gtk_label_set_text(GTK_LABEL(to_file_label), "(Wav)");
+    }
+    return 0;
+}
+
+int get_filename_dialog(char *fname, char *dialog_title) {
+    gint res;
+    GtkWidget *dialog;
+    GtkFileChooser *chooser;
+    char *chosen_filename;
+    dialog = gtk_file_chooser_dialog_new(
+            dialog_title,
+            GTK_WINDOW(window),
+            GTK_FILE_CHOOSER_ACTION_SAVE,
+            "Cancel",
+            GTK_RESPONSE_CANCEL,
+            "Select",
+            GTK_RESPONSE_ACCEPT,
+            NULL);
+    chooser = GTK_FILE_CHOOSER(dialog);
+    gtk_file_chooser_set_current_name(chooser, fname);
+    gtk_file_chooser_set_filename(chooser, fname);
+    res = gtk_dialog_run(GTK_DIALOG(dialog));
+    if (res == GTK_RESPONSE_ACCEPT) {
+        chosen_filename = gtk_file_chooser_get_filename(chooser);
+        strncpy(fname, chosen_filename, STRSIZE);
+        g_free(chosen_filename);
+    }
+    gtk_widget_destroy(GTK_WIDGET(dialog));
+    return 0;
 }
 
 void on_convert_to_file_button_clicked(GtkButton *b) {
+    get_filename_dialog(convert_to_filename, "Destination File");
+    update_convert_entrys();
 }
 
-void on_convert_from_button_clicked(GtkButton *b) {
+void on_convert_from_file_button_clicked(GtkButton *b) {
+    get_filename_dialog(convert_from_filename, "Source File");
+    update_convert_entrys();
 }
 
 void on_convert_sample_rate_entry_changed(GtkEntry *e) {
@@ -484,6 +564,15 @@ void on_to_file_entry_changed(GtkEntry *e) {
 }
 
 void on_convert_file_button_clicked(GtkEntry *e) {
+    dbgprintf("convert_file_button pressed\n");
+    if (src_is_wave) {
+        dbgprintf("src_is_wave\n");
+        pthread_mutex_lock(&args_lock);
+
+        pthread_mutex_unlock(&args_lock);
+    } else {
+
+    }
 }
 
 void on_show_variables_button_clicked(GtkButton *b) {
@@ -544,6 +633,8 @@ int init_globals(int argc, char **argv) {
     to_file_entry = get_widget("to_file_entry");
     convert_file_button = get_widget("convert_file_button");
     show_variables_button = get_widget("show_variales_button");
+    from_file_label = get_widget("from_file_label");
+    to_file_label = get_widget("to_file_label");
 
 
     gtk_combo_box_set_active(GTK_COMBO_BOX(tone_combo), 0);
@@ -552,7 +643,7 @@ int init_globals(int argc, char **argv) {
         printf(" tone generator\n");
         return -1;
     }
-    if (pthread_mutex_init(&gsargs_lock, NULL) != 0) {
+    if (pthread_mutex_init(&args_lock, NULL) != 0) {
         printf("Failed to allocate pthread mutex lock for");
         printf(" tone generator\n");
         return -1;
@@ -579,6 +670,7 @@ int init_globals(int argc, char **argv) {
     set_toggle(wave2data_radio, 1);
     convert_sr = 44100;
     update_entrys();
+    update_convert_labels();
     return 0;
 }
 
