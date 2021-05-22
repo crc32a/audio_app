@@ -10,10 +10,12 @@
 #include<ctype.h>
 #include<glib.h>
 #include<math.h>
+#include <sndfile.h>
 #include"dft.h"
 #include"audio_app.h"
 
 #define STRSIZE 1023
+#define DEBUG 1
 
 
 char *tone_save_filename;
@@ -21,6 +23,7 @@ char *convert_from_filename;
 char *convert_to_filename;
 char *tstr;
 
+GAsyncQueue *q;
 GtkBuilder *bld;
 GtkWidget *window;
 GtkWidget *tone_combo;
@@ -45,7 +48,6 @@ GtkWidget *to_file_label;
 GdkCursor *busy;
 GdkDisplay *dis;
 
-#define DEBUG 1
 
 char *tone_type_str[] = {"", "Sine", "Square", "Saw Tooth"};
 
@@ -100,8 +102,30 @@ GtkWidget *get_widget(char *name) {
     return GTK_WIDGET(gtk_builder_get_object(bld, name));
 }
 
-int error_dialog(char *fmt, ...) {
+gboolean error_dialog_idle(gpointer msg) {
+    char *str;
     GtkWidget *dialog;
+
+
+    str = (char *)msg;
+    dbgprintf("new dialog error with msg = \"%s\"\n", msg);
+    dialog = gtk_message_dialog_new(GTK_WINDOW(window),
+            GTK_DIALOG_MODAL,
+            GTK_MESSAGE_ERROR,
+            GTK_BUTTONS_CLOSE,
+            msg
+            );
+    dbgprintf("error message dialog run()\n");
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    dbgprintf("destroying error dialog\n");
+    gtk_widget_destroy(dialog);
+    dbgprintf("Freeing msg memory\n");
+    free(str);
+    dbgprintf("Exiting error_dialog\n");
+    return G_SOURCE_REMOVE;
+}
+
+int error_dialog(char *fmt, ...) {
     char *msg;
     va_list ap;
 
@@ -112,18 +136,8 @@ int error_dialog(char *fmt, ...) {
 
     va_start(ap, fmt);
     vsnprintf(msg, STRSIZE, fmt, ap);
-    va_end(ap);
-
-    dialog = gtk_message_dialog_new(GTK_WINDOW(window),
-            GTK_DIALOG_MODAL,
-            GTK_MESSAGE_ERROR,
-            GTK_BUTTONS_CLOSE,
-            msg
-            );
-    gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
-    free(msg);
-    return 0;
+    va_end(ap);    
+    gdk_threads_add_idle(error_dialog_idle, msg);
 }
 
 int set_entry_text(GtkWidget *w, char *fmt, ...) {
@@ -354,7 +368,12 @@ int start_spinlock(char *calling_func_name) {
     pthread_mutex_unlock(&busy_lock);
     return 0;
 }
-
+gboolean stop_spinlock_idle(gpointer nop){
+    GdkWindow *win;
+    win = gtk_widget_get_window(window);
+    gdk_window_set_cursor(win, NULL);
+    return G_SOURCE_REMOVE;
+}
 int stop_spinlock(char *calling_func_name) {
     GdkWindow *win;
 
@@ -362,7 +381,7 @@ int stop_spinlock(char *calling_func_name) {
     dbgprintf("%s: trying busylock (to stop it)\n", calling_func_name);
     pthread_mutex_trylock(&busy_lock);
     dbgprintf("%s: clearing spinner\n", calling_func_name);
-    gdk_window_set_cursor(win, NULL);
+    gdk_threads_add_idle(stop_spinlock_idle, NULL);
     dbgprintf("%s: unlocking busylock\n", calling_func_name);
     pthread_mutex_unlock(&busy_lock);
     return 0;
@@ -564,19 +583,196 @@ void on_to_file_entry_changed(GtkEntry *e) {
 }
 
 void on_convert_file_button_clicked(GtkEntry *e) {
+    thread_args *args;
+    pthread_t th;
+    size_t tsize;
+
     dbgprintf("convert_file_button pressed\n");
-    if (src_is_wave) {
-        dbgprintf("src_is_wave\n");
-        pthread_mutex_lock(&args_lock);
+    tsize = sizeof (thread_args) + 3 * (STRSIZE + 1);
 
-        pthread_mutex_unlock(&args_lock);
-    } else {
-
+    if (thread_args_init(&args) < 0) {
+        error_dialog("Error allocating %zi bytes for convert threadmemory",
+                tsize);
     }
+    pthread_mutex_lock(&args_lock);
+    strncpy(args->from_file, convert_from_filename, STRSIZE);
+    strncpy(args->to_file, convert_to_filename, STRSIZE);
+    args->sr = convert_sr;
+    pthread_mutex_unlock(&args_lock);
+
+    if (src_is_wave) {
+        dbgprintf("src is wav");
+        start_spinlock("convert_bgutton");
+        if (pthread_create(&th, NULL, save_to_data, args) == 0) {
+            dbgprintf("save_to_data thread created\n");
+            pthread_detach(th);
+        } else {
+            error_dialog("Error starting save data thread");
+            thread_args_destroy(args);
+            stop_spinlock("convert_button");
+        }
+    } else {
+        dbgprintf("src is data\n");
+        start_spinlock("convert_button");
+        if (pthread_create(&th, NULL, save_to_wave, args) == 0) {
+            dbgprintf("save_to_wave thread created");
+            pthread_detach(th);
+        } else {
+            error_dialog("Error starting save wave thread");
+            thread_args_destroy(args);
+            stop_spinlock("convert_button");
+        }
+    }// End of !src_is_wave
 }
 
-void on_show_variables_button_clicked(GtkButton *b) {
+void *save_to_data(void *vargs) {
+    thread_args *args;
+    SNDFILE *fi;
+    cmp_t *data;
+    SF_INFO si;
+    size_t tsize;
+    int64_t n;
+    int64_t resp;
+    int sr;
+
+    args = (thread_args *) vargs;
+    fi = sf_open(args->from_file, SFM_READ, &si);
+    sf_close(fi);
+    sr = si.samplerate;
+    n = si.frames;
+
+    dbgprintf("Reading wave data from \"%s\" sr=%d frames =%d\n",
+            args->from_file, sr, n);
+    resp = fread_wav(args->from_file, &data);
+    if (resp < n) {
+        error_dialog("Error reading from file \"%s\"", args->from_file);
+        stop_spinlock("save_to_data");
+        thread_args_destroy(args);
+        pthread_exit(NULL);
+        return NULL;
+    }
+    dbgprintf("writing data file \"%s\"\n", args->to_file);
+    resp = dft_fwrite(args->to_file, data, n);
+    if (resp < n) {
+        error_dialog("Error writing to file \"%s\"", args->to_file);
+        stop_spinlock("save_to_data");
+        thread_args_destroy(args);
+        pthread_exit(NULL);
+        return NULL;
+    }
+    dbgprintf("save_to_data finished\n");
+    stop_spinlock("save_to_data");
+    thread_args_destroy(args);
+    pthread_exit(NULL);
+    return NULL;
+}
+
+void *save_to_wave(void *vargs) {
+    thread_args *args;
+    cmp_t *data;
+    int64_t nread;
+    int64_t n;
+    int64_t status;
+    size_t tsize;
+
+    args = (thread_args *) vargs;
+    n = nsize(args->from_file);
+    if (n < 0) {
+        error_dialog("Error reading file \"%s\"", args->from_file);
+        thread_args_destroy(args);
+        stop_spinlock("save_to_wave");
+        pthread_exit(NULL);
+        return NULL;
+    }
+    tsize = sizeof (cmp_t) * n;
+    data = (cmp_t *) malloc(tsize);
+    if (data == NULL) {
+        error_dialog("Error allocating %zi bytes fo source data", tsize);
+        thread_args_destroy(args);
+        stop_spinlock("save_to_wave");
+        pthread_exit(NULL);
+        return NULL;
+    }
+    dbgprintf("Reading from data file \"%s\"n", args->from_file);
+    nread = dft_fread(args->from_file, data, n);
+    if (nread < 0) {
+        error_dialog("Error reading from file \":%s\"", args->from_file);
+        free(data);
+        thread_args_destroy(args);
+        stop_spinlock("save_to_wave");
+        pthread_exit(NULL);
+        return NULL;
+    }
+    dbgprintf("Writing wave data to \"%s\"\n", args->to_file);
+    status = fwrite_wav(args->to_file, data, args->sr, n);
+    if (status < 0) {
+        error_dialog("Error writing to file \"%s\"", args->to_file);
+        free(data);
+        thread_args_destroy(args);
+        stop_spinlock("save_to_wave");
+        pthread_exit(NULL);
+        return NULL;
+    }
+    free(data);
+    thread_args_destroy(args);
+    stop_spinlock("save_to_wave");
+    pthread_exit(NULL);
+
+    return NULL;
+}
+
+void on_show_variables_button_clicked(GtkButton * b) {
+
     print_variables();
+}
+
+int thread_args_init(thread_args **ta) {
+    thread_args *args;
+    size_t tsize;
+
+    tsize = sizeof (thread_args);
+    args = (thread_args*) malloc(tsize);
+    if (args == NULL) {
+        *ta = NULL;
+        return -1;
+    }
+    args->from_file = NULL;
+    args->to_file = NULL;
+    args->tone_file = NULL;
+    tsize = STRSIZE + 1;
+    args->from_file = (char *) malloc(tsize);
+    args->to_file = (char *) malloc(tsize);
+    args->tone_file = (char *) malloc(tsize);
+    if (args->from_file == NULL ||
+            args->to_file == NULL ||
+            args->tone_file == NULL) {
+        thread_args_destroy(args);
+        *ta = NULL;
+        return -1;
+    }
+    *ta = args;
+
+    return 0;
+}
+
+int thread_args_destroy(thread_args * ta) {
+    if (ta != NULL) {
+        if (ta->from_file != NULL) {
+            free(ta->from_file);
+            ta->from_file = NULL;
+        }
+        if (ta->to_file != NULL) {
+            free(ta->to_file);
+            ta->to_file = NULL;
+        }
+        if (ta->tone_file != NULL) {
+
+            free(ta->tone_file);
+            ta->tone_file = NULL;
+        }
+        free(ta);
+    }
+    return 0;
 }
 
 int init_globals(int argc, char **argv) {
@@ -609,7 +805,7 @@ int init_globals(int argc, char **argv) {
         printf("Failed to allocate %zi bytes for ", tsize);
         printf("tstr\n");
     }
-
+    q = g_async_queue_new();
     strncpy(tone_save_filename, "untitled.dat", STRSIZE);
     gtk_init(&argc, &argv);
     bld = gtk_builder_new_from_string(glade_start, glade_size);
@@ -671,6 +867,7 @@ int init_globals(int argc, char **argv) {
     convert_sr = 44100;
     update_entrys();
     update_convert_labels();
+
     return 0;
 }
 

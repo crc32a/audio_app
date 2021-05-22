@@ -33,12 +33,14 @@ int update_entrys();
 int update_convert_entrys();
 char *get_entry_text(char *buff, GtkWidget *entry);
 int init_globals(int argc, char **argv);
-void *gensigcaller(void *);
-void *savetonecaller(void *);
+gboolean error_dialog_idle(gpointer msg);
+gboolean stop_spinlock_idle(gpointer nop);
 int print_variables();
 int is_toggled(GtkRadioButton *b);
 int get_filename_dialog(char *fname, char *dialog_title);
 int update_convert_labels();
+int thread_args_init(thread_args **ta);
+int thread_args_destroy(thread_args *ta);
 
 // Signals
 void on_show_variables_button_clicked(GtkButton *b);
@@ -60,3 +62,9 @@ void on_to_file_entry_changed(GtkEntry *e);
 void on_convert_file_button_clicked(GtkEntry *e);
 int start_spinlock(char *calling_func_name);
 int stop_spinlock(char *calling_func_name);
+
+// Thread workers
+void *save_to_wave(void *vargs);
+void *save_to_data(void *vargs);
+void *gensigcaller(void *);
+void *savetonecaller(void *);
